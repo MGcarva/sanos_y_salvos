@@ -1,137 +1,167 @@
 #!/bin/bash
+# =============================================================
+# user-data.sh â€” Bootstrap EC2 para Sanos y Salvos
+# Variables como ${db_host} son reemplazadas por Terraform templatefile.
+# =============================================================
 exec > /var/log/sanos-deploy.log 2>&1
-echo "=== Inicio deploy Sanos y Salvos 04/23/2026 20:03:08 ==="
+echo "=== Inicio bootstrap EC2 $(date) ==="
 
-# ---- Instalar Docker ----
-dnf install -y docker
+# ---- Instalar Docker y cliente PostgreSQL ----
+dnf install -y docker postgresql15
 systemctl start docker
 systemctl enable docker
+usermod -aG docker ec2-user
 
-# ---- Swap 2GB para t3.micro (1GB RAM + 5 JVMs Spring Boot) ----
-fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+# ---- Swap 3GB para t3.medium con 5 JVMs Spring Boot ----
+fallocate -l 3G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=3072
 chmod 600 /swapfile
 mkswap /swapfile
 swapon /swapfile
 echo '/swapfile none swap sw 0 0' >> /etc/fstab
 echo 10 > /proc/sys/vm/swappiness
-echo "[OK] Swap 2GB activado"
+echo "[OK] Swap 3GB activado"
 
-# ---- Login ECR (usa instance profile LabRole, sin credenciales explicitas) ----
-ECR_PASS=$(aws ecr get-login-password --region us-east-1 2>/dev/null)
-echo "$ECR_PASS" | docker login --username AWS --password-stdin 236373526017.dkr.ecr.us-east-1.amazonaws.com
+# ---- Login ECR (usa LabInstanceProfile, sin credenciales explÃ­citas) ----
+ECR_PASS=$(aws ecr get-login-password --region ${aws_region})
+echo "$ECR_PASS" | docker login --username AWS --password-stdin ${ecr_registry}
 echo "[OK] ECR login"
 
-# ---- Red de contenedores ----
-docker network create sanos-network
+# ---- Inicializar bases de datos en RDS ----
+echo "[INFO] Creando bases de datos en RDS..."
+PGPASSWORD="${db_pass}" psql -h ${db_host} -U ${db_user} -d postgres -c "
+  SELECT 'CREATE DATABASE auth_db'            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'auth_db') \gexec
+  SELECT 'CREATE DATABASE mascotas_db'        WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'mascotas_db') \gexec
+  SELECT 'CREATE DATABASE geolocalizacion_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'geolocalizacion_db') \gexec
+  SELECT 'CREATE DATABASE coincidencias_db'   WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'coincidencias_db') \gexec
+" || echo "[WARN] Error creando BDs, pueden ya existir"
 
-# ---- RabbitMQ ----
+PGPASSWORD="${db_pass}" psql -h ${db_host} -U ${db_user} -d geolocalizacion_db \
+  -c "CREATE EXTENSION IF NOT EXISTS postgis;" || true
+PGPASSWORD="${db_pass}" psql -h ${db_host} -U ${db_user} -d coincidencias_db \
+  -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" || true
+echo "[OK] Bases de datos inicializadas"
+
+# ---- Red de contenedores ----
+docker network create sanos-network || true
+
+# ---- RabbitMQ (imagen pÃºblica, siempre disponible) ----
 docker run -d --name rabbitmq \
   --network sanos-network \
   --restart unless-stopped \
-  -e RABBITMQ_DEFAULT_USER=sanosrabbit \
-  -e RABBITMQ_DEFAULT_PASS=SanosRabbit2026! \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  -e RABBITMQ_DEFAULT_USER=${rabbitmq_user} \
+  -e RABBITMQ_DEFAULT_PASS=${rabbitmq_pass} \
   rabbitmq:3.12-alpine
-
-echo "[OK] RabbitMQ iniciado, esperando 25s..."
+echo "[OK] RabbitMQ iniciado"
 sleep 25
 
-# ---- auth-service ----
+# =============================================================
+# Script para iniciar microservicios (se puede re-ejecutar
+# despuÃ©s de hacer docker push de las imÃ¡genes a ECR)
+# =============================================================
+cat > /home/ec2-user/start-services.sh << 'STARTSCRIPT'
+#!/bin/bash
+exec >> /var/log/sanos-services.log 2>&1
+echo "=== Iniciando microservicios $(date) ==="
+
+ECR="${ecr_registry}"
+PROYECTO="${proyecto}"
+
+# Re-login ECR
+aws ecr get-login-password --region ${aws_region} | \
+  docker login --username AWS --password-stdin "$ECR"
+
+pull_or_warn() {
+  local img="$1"
+  docker pull "$img" && return 0
+  echo "[WARN] No se pudo pull $img â€” reintenta despuÃ©s de docker push"
+  return 1
+}
+
+# auth-service
+docker rm -f auth-service 2>/dev/null || true
+IMG="$ECR/$PROYECTO/auth-service:latest"
+pull_or_warn "$IMG" && \
 docker run -d --name auth-service \
-  --network sanos-network \
-  --restart unless-stopped \
-  --memory 280m --memory-swap 280m \
+  --network sanos-network --restart unless-stopped --memory 512m \
   -p 8081:8081 \
-  -e JAVA_TOOL_OPTIONS="-Xmx130m -Xms32m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC" \
-  -e DB_HOST=sanos-y-salvos-postgres.crfnd54e1dqp.us-east-1.rds.amazonaws.com \
-  -e DB_USER=sanosadmin \
-  -e DB_PASS=SanosYSalvos2026! \
-  -e REDIS_HOST=sanos-y-salvos-redis.jfb0yl.0001.use1.cache.amazonaws.com \
-  -e REDIS_PASS=SanosRedis2026! \
-  -e JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970 \
-  -e MAIL_HOST=localhost \
-  -e MAIL_PORT=1025 \
-  -e MAIL_USER= \
-  -e MAIL_PASS= \
+  -e JAVA_TOOL_OPTIONS="-Xmx256m -Xms64m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC" \
+  -e DB_HOST=${db_host} -e DB_USER=${db_user} -e DB_PASS=${db_pass} \
+  -e REDIS_HOST=${redis_host} -e REDIS_PASS=${redis_pass} \
+  -e JWT_SECRET=${jwt_secret} \
   -e AUTO_VERIFY_EMAIL=true \
-  -e FRONTEND_URL=http://sanos-y-salvos-frontend-236373526017.s3-website-us-east-1.amazonaws.com \
-  236373526017.dkr.ecr.us-east-1.amazonaws.com/sanos-y-salvos/auth-service:latest
-echo "[OK] auth-service iniciado"
+  -e MAIL_HOST=localhost -e MAIL_PORT=1025 -e MAIL_USER="" -e MAIL_PASS="" \
+  "$IMG" && echo "[OK] auth-service" || echo "[FAIL] auth-service"
 
-# ---- ms-mascotas ----
-# Nota: MINIO_ENDPOINT apunta a S3. Las fotos requieren credenciales validas.
-# Si las credenciales de Academy expiran, redeployar el EC2.
+# ms-mascotas
+docker rm -f ms-mascotas 2>/dev/null || true
+IMG="$ECR/$PROYECTO/ms-mascotas:latest"
+pull_or_warn "$IMG" && \
 docker run -d --name ms-mascotas \
-  --network sanos-network \
-  --restart unless-stopped \
-  --memory 280m --memory-swap 280m \
+  --network sanos-network --restart unless-stopped --memory 512m \
   -p 8082:8082 \
-  -e JAVA_TOOL_OPTIONS="-Xmx130m -Xms32m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC" \
-  -e DB_HOST=sanos-y-salvos-postgres.crfnd54e1dqp.us-east-1.rds.amazonaws.com \
-  -e DB_USER=sanosadmin \
-  -e DB_PASS=SanosYSalvos2026! \
-  -e RABBITMQ_HOST=rabbitmq \
-  -e RABBITMQ_USER=sanosrabbit \
-  -e RABBITMQ_PASS=SanosRabbit2026! \
-  -e MINIO_ENDPOINT=https://s3.amazonaws.com \
-  -e MINIO_ACCESS_KEY=ASIATOCHVYYA7PPWF5S4 \
-  -e MINIO_SECRET_KEY=7bm0NPMnwslEiIOeJEVyMY7EghT5vPIZRSOA57rW \
-  -e JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970 \
-  236373526017.dkr.ecr.us-east-1.amazonaws.com/sanos-y-salvos/ms-mascotas:latest
-echo "[OK] ms-mascotas iniciado"
+  -e JAVA_TOOL_OPTIONS="-Xmx256m -Xms64m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC" \
+  -e DB_HOST=${db_host} -e DB_USER=${db_user} -e DB_PASS=${db_pass} \
+  -e RABBITMQ_HOST=rabbitmq -e RABBITMQ_USER=${rabbitmq_user} -e RABBITMQ_PASS=${rabbitmq_pass} \
+  -e S3_BUCKET=${s3_bucket} -e AWS_REGION=${aws_region} \
+  -e JWT_SECRET=${jwt_secret} \
+  "$IMG" && echo "[OK] ms-mascotas" || echo "[FAIL] ms-mascotas"
 
-# ---- ms-geolocalizacion ----
+# ms-geolocalizacion
+docker rm -f ms-geolocalizacion 2>/dev/null || true
+IMG="$ECR/$PROYECTO/ms-geolocalizacion:latest"
+pull_or_warn "$IMG" && \
 docker run -d --name ms-geolocalizacion \
-  --network sanos-network \
-  --restart unless-stopped \
-  --memory 280m --memory-swap 280m \
+  --network sanos-network --restart unless-stopped --memory 512m \
   -p 8083:8083 \
-  -e JAVA_TOOL_OPTIONS="-Xmx130m -Xms32m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC" \
-  -e DB_HOST=sanos-y-salvos-postgres.crfnd54e1dqp.us-east-1.rds.amazonaws.com \
-  -e DB_USER=sanosadmin \
-  -e DB_PASS=SanosYSalvos2026! \
-  -e RABBITMQ_HOST=rabbitmq \
-  -e RABBITMQ_USER=sanosrabbit \
-  -e RABBITMQ_PASS=SanosRabbit2026! \
-  -e JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970 \
-  236373526017.dkr.ecr.us-east-1.amazonaws.com/sanos-y-salvos/ms-geolocalizacion:latest
-echo "[OK] ms-geolocalizacion iniciado"
+  -e JAVA_TOOL_OPTIONS="-Xmx256m -Xms64m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC" \
+  -e DB_HOST=${db_host} -e DB_USER=${db_user} -e DB_PASS=${db_pass} \
+  -e RABBITMQ_HOST=rabbitmq -e RABBITMQ_USER=${rabbitmq_user} -e RABBITMQ_PASS=${rabbitmq_pass} \
+  -e JWT_SECRET=${jwt_secret} \
+  "$IMG" && echo "[OK] ms-geolocalizacion" || echo "[FAIL] ms-geolocalizacion"
 
-# ---- ms-coincidencias ----
+# ms-coincidencias
+docker rm -f ms-coincidencias 2>/dev/null || true
+IMG="$ECR/$PROYECTO/ms-coincidencias:latest"
+pull_or_warn "$IMG" && \
 docker run -d --name ms-coincidencias \
-  --network sanos-network \
-  --restart unless-stopped \
-  --memory 280m --memory-swap 280m \
+  --network sanos-network --restart unless-stopped --memory 512m \
   -p 8084:8084 \
-  -e JAVA_TOOL_OPTIONS="-Xmx130m -Xms32m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC" \
-  -e DB_HOST=sanos-y-salvos-postgres.crfnd54e1dqp.us-east-1.rds.amazonaws.com \
-  -e DB_USER=sanosadmin \
-  -e DB_PASS=SanosYSalvos2026! \
-  -e RABBITMQ_HOST=rabbitmq \
-  -e RABBITMQ_USER=sanosrabbit \
-  -e RABBITMQ_PASS=SanosRabbit2026! \
-  -e JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970 \
-  236373526017.dkr.ecr.us-east-1.amazonaws.com/sanos-y-salvos/ms-coincidencias:latest
-echo "[OK] ms-coincidencias iniciado"
+  -e JAVA_TOOL_OPTIONS="-Xmx256m -Xms64m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC" \
+  -e DB_HOST=${db_host} -e DB_USER=${db_user} -e DB_PASS=${db_pass} \
+  -e RABBITMQ_HOST=rabbitmq -e RABBITMQ_USER=${rabbitmq_user} -e RABBITMQ_PASS=${rabbitmq_pass} \
+  -e JWT_SECRET=${jwt_secret} \
+  "$IMG" && echo "[OK] ms-coincidencias" || echo "[FAIL] ms-coincidencias"
 
-# Dar tiempo a los microservicios para inicializar antes de arrancar el BFF
-echo "Esperando 60s para que microservicios inicialicen y creen tablas..."
-sleep 60
+echo "[INFO] Esperando 90s para que microservicios inicialicen..."
+sleep 90
 
-# ---- bff-service ----
+# bff-service
+docker rm -f bff-service 2>/dev/null || true
+IMG="$ECR/$PROYECTO/bff-service:latest"
+pull_or_warn "$IMG" && \
 docker run -d --name bff-service \
-  --network sanos-network \
-  --restart unless-stopped \
-  --memory 280m --memory-swap 280m \
+  --network sanos-network --restart unless-stopped --memory 512m \
   -p 8080:8080 \
-  -e JAVA_TOOL_OPTIONS="-Xmx130m -Xms32m -XX:MaxMetaspaceSize=96m -XX:+UseSerialGC" \
-  -e AUTH_HOST=auth-service \
-  -e MASCOTAS_HOST=ms-mascotas \
-  -e GEO_HOST=ms-geolocalizacion \
-  -e COINCIDENCIAS_HOST=ms-coincidencias \
-  -e REDIS_HOST=sanos-y-salvos-redis.jfb0yl.0001.use1.cache.amazonaws.com \
-  -e REDIS_PASS=SanosRedis2026! \
-  -e JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970 \
-  236373526017.dkr.ecr.us-east-1.amazonaws.com/sanos-y-salvos/bff-service:latest
-echo "[OK] bff-service iniciado"
+  -e JAVA_TOOL_OPTIONS="-Xmx256m -Xms64m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC" \
+  -e AUTH_HOST=auth-service -e AUTH_PORT=8081 \
+  -e MASCOTAS_HOST=ms-mascotas -e MASCOTAS_PORT=8082 \
+  -e GEO_HOST=ms-geolocalizacion -e GEO_PORT=8083 \
+  -e COINCIDENCIAS_HOST=ms-coincidencias -e COINCIDENCIAS_PORT=8084 \
+  -e REDIS_HOST=${redis_host} -e REDIS_PASS=${redis_pass} \
+  -e JWT_SECRET=${jwt_secret} \
+  "$IMG" && echo "[OK] bff-service" || echo "[FAIL] bff-service"
 
-echo "=== Deploy completo 04/23/2026 20:03:08 ==="
+echo "=== Microservicios iniciados $(date) ==="
+STARTSCRIPT
+
+chmod +x /home/ec2-user/start-services.sh
+chown ec2-user:ec2-user /home/ec2-user/start-services.sh
+
+# Intentar iniciar servicios ahora (puede fallar si imÃ¡genes no estÃ¡n en ECR aÃºn)
+echo "[INFO] Intentando iniciar microservicios (puede fallar si imÃ¡genes no estÃ¡n en ECR)..."
+/home/ec2-user/start-services.sh || echo "[INFO] start-services.sh fallÃ³ â€” ejecutar de nuevo despuÃ©s de docker push"
+
+echo "=== Bootstrap EC2 completo $(date) ==="
+echo "=== Para reiniciar servicios: /home/ec2-user/start-services.sh ==="

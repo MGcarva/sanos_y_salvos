@@ -101,5 +101,15 @@ variable "jwt_secret" {
 variable "aws_account_id" {
   description = "ID de la cuenta AWS Academy — se usa para construir URLs de ECR"
   type        = string
-  default     = ""   # Se completa con tu Account ID de Academy
+  default     = "111837322528"   # Se completa con tu Account ID de Academy
+}
+
+# ================================================================
+# EC2
+# ================================================================
+
+variable "key_pair_name" {
+  description = "Nombre del Key Pair de EC2 para acceso SSH (crearlo en consola AWS antes del deploy)"
+  type        = string
+  default     = "sanos-y-salvos-key"
 }

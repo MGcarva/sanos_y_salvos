@@ -30,7 +30,7 @@ resource "aws_lb_target_group" "frontend" {
   port        = 3000
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
-  target_type = "ip"   # Fargate usa IP, no instancias EC2
+  target_type = "instance"
 
   health_check {
     enabled             = true
@@ -60,7 +60,7 @@ resource "aws_lb_target_group" "bff" {
   port        = 8080
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
-  target_type = "ip"
+  target_type = "instance"
 
   health_check {
     enabled             = true
@@ -96,7 +96,7 @@ resource "aws_lb_listener" "http" {
   default_action {
     type = "redirect"
     redirect {
-      host        = "sanos-y-salvos-frontend-236373526017.s3-website-us-east-1.amazonaws.com"
+      host        = "${var.proyecto}-frontend-${data.aws_caller_identity.current.account_id}.s3-website-us-east-1.amazonaws.com"
       path        = "/#{path}"
       query       = "#{query}"
       protocol    = "HTTP"
