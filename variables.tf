@@ -101,7 +101,7 @@ variable "jwt_secret" {
 variable "aws_account_id" {
   description = "ID de la cuenta AWS Academy — se usa para construir URLs de ECR"
   type        = string
-  default     = "111837322528"   # Se completa con tu Account ID de Academy
+  default     = "895112511964"   # Se completa con tu Account ID de Academy
 }
 
 # ================================================================
@@ -112,4 +112,10 @@ variable "key_pair_name" {
   description = "Nombre del Key Pair de EC2 para acceso SSH (crearlo en consola AWS antes del deploy)"
   type        = string
   default     = "sanos-y-salvos-key"
+}
+
+variable "ec2_ami_id" {
+  description = "AMI de Amazon Linux 2023 para us-east-1. Valor por defecto permite ejecutar terraform destroy sin permisos ec2:DescribeImages"
+  type        = string
+  default     = "ami-040e163049fd403ec"  # Amazon Linux 2023 us-east-1 (se sobreescribe en apply con data source)
 }

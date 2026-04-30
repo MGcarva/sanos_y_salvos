@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd \"C:\\\\Users\\\\crisa\\\\OneDrive\\\\Escritorio\\\\Repositorios GitHub\\\\Sanos y salvos\\\\sanos_y_salvos\"; $keyResult = aws ec2 create-key-pair --key-name \"sanos-y-salvos-key\" --region us-east-1 --output json | ConvertFrom-Json; $keyResult.KeyMaterial | Out-File -FilePath \"sanos-y-salvos-key.pem\" -Encoding ASCII; Write-Host \"Key pair creado: $\\($keyResult.KeyName\\)\")",
+      "PowerShell(aws sts get-caller-identity --region us-east-1 2>&1)"
+    ]
+  }
+}

@@ -80,51 +80,50 @@ terraform apply
 Revisa los outputs al finalizar.
 
 
-### 3. Crea y configura el bucket S3 manualmente
-AWS Academy no permite crear el bucket por Terraform. Debes hacerlo con AWS CLI:
+### 3. Crea y configura el bucket S3 para fotos de mascotas
 
-**a) Crear el bucket:**
+> ⚠️ **IMPORTANTE — Nombre del bucket:**
+> S3 usa un **namespace global** compartido por todas las cuentas de AWS en el mundo.
+> El nombre `sanos-y-salvos-mascotas-fotos` ya puede estar tomado por otra cuenta.
+> **Siempre usa tu Account ID como sufijo** para garantizar unicidad:
+> ```
+> sanos-y-salvos-mascotas-<TU_ACCOUNT_ID>
+> ```
+> Ejemplo: `sanos-y-salvos-mascotas-895112511964`
+
+**a) Obtener tu Account ID y crear el bucket:**
 ```sh
-aws s3 mb s3://sanos-y-salvos-mascotas-fotos --region us-east-1
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+BUCKET="sanos-y-salvos-mascotas-${ACCOUNT_ID}"
+
+aws s3 mb s3://$BUCKET --region us-east-1
+echo "Bucket creado: $BUCKET"
 ```
 
-**b) Habilitar el bucket como sitio web:**
+**b) Desactivar bloqueo de acceso público y aplicar política:**
 ```sh
-aws s3 website s3://sanos-y-salvos-mascotas-fotos/ --index-document index.html
+aws s3api delete-public-access-block --bucket $BUCKET
+
+aws s3api put-bucket-policy --bucket $BUCKET --policy "{
+  \"Version\": \"2012-10-17\",
+  \"Statement\": [{
+    \"Sid\": \"PublicRead\",
+    \"Effect\": \"Allow\",
+    \"Principal\": \"*\",
+    \"Action\": \"s3:GetObject\",
+    \"Resource\": \"arn:aws:s3:::${BUCKET}/*\"
+  }]
+}"
 ```
 
-**c) Permitir acceso público (opcional, para pruebas):**
+**c) Configurar el microservicio ms-mascotas con el nombre correcto:**
+
+Al lanzar el contenedor de `ms-mascotas`, pasa la variable de entorno:
 ```sh
-aws s3api put-bucket-policy --bucket sanos-y-salvos-mascotas-fotos --policy file://bucket-policy.json
-```
-Deben crear un archivo `bucket-policy.json` con una política similar a:
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "PublicReadGetObject",
-      "Effect": "Allow",
-      "Principal": "*",
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::sanos-y-salvos-mascotas-fotos/*"
-    }
-  ]
-}
+-e MINIO_BUCKET=$BUCKET
 ```
 
-**d) Subir archivos de prueba (opcional):**
-```sh
-aws s3 cp archivo.jpg s3://sanos-y-salvos-mascotas-fotos/
-```
-
-**e) Verifica la URL del sitio web:**
-La URL será:
-```
-http://sanos-y-salvos-mascotas-fotos.s3-website-us-east-1.amazonaws.com
-```
-
-Configura los permisos según la necesidad de tu aplicación y las políticas de tu curso.
+Si ya está corriendo, reinícialo con el nombre del bucket correcto (ver guía de despliegue).
 
 ### 4. Despliega el backend
 Asegúrate de tener Docker Desktop y AWS CLI instalados. Ejecuta:

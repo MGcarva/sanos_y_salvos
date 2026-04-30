@@ -64,7 +64,7 @@ resource "aws_lb_target_group" "bff" {
 
   health_check {
     enabled             = true
-    path                = "/actuator/health"
+    path                = "/api/actuator/health"
     port                = "traffic-port"
     protocol            = "HTTP"
     healthy_threshold   = 2
