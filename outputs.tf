@@ -114,3 +114,59 @@ output "ec2_instance_id" {
   description = "ID de la instancia EC2 backend"
   value       = aws_instance.backend.id
 }
+
+# ================================================================
+# OUTPUTS NUEVA ARQUITECTURA — Lambda + SQS + API Gateway
+# ================================================================
+
+output "api_gateway_url" {
+  description = "URL pública del API Gateway — punto de entrada de la nueva arquitectura Lambda"
+  value       = aws_apigatewayv2_api.main.api_endpoint
+}
+
+output "api_gateway_id" {
+  description = "ID del API Gateway HTTP API"
+  value       = aws_apigatewayv2_api.main.id
+}
+
+output "sqs_reportes_nuevos_url" {
+  description = "URL de la cola SQS reportes-nuevos — configurar como SQS_REPORTES_NUEVOS_URL"
+  value       = aws_sqs_queue.reportes_nuevos.url
+}
+
+output "sqs_geo_completados_url" {
+  description = "URL de la cola SQS geo-completados — configurar como SQS_GEO_COMPLETADOS_URL"
+  value       = aws_sqs_queue.geo_completados.url
+}
+
+output "sqs_notificaciones_url" {
+  description = "URL de la cola SQS notificaciones"
+  value       = aws_sqs_queue.notificaciones.url
+}
+
+output "lambda_functions" {
+  description = "ARNs de las funciones Lambda desplegadas"
+  value = {
+    bff           = aws_lambda_function.bff.arn
+    auth          = aws_lambda_function.auth.arn
+    mascotas      = aws_lambda_function.mascotas.arn
+    geolocalizacion = aws_lambda_function.geo.arn
+    coincidencias = aws_lambda_function.coincidencias.arn
+  }
+}
+
+output "resumen_nueva_arquitectura" {
+  description = "Resumen de la arquitectura Lambda + SQS + API Gateway"
+  value = {
+    api_gateway_url        = aws_apigatewayv2_api.main.api_endpoint
+    sqs_reportes_nuevos    = aws_sqs_queue.reportes_nuevos.url
+    sqs_geo_completados    = aws_sqs_queue.geo_completados.url
+    endpoints = {
+      auth          = "${aws_apigatewayv2_api.main.api_endpoint}/api/auth"
+      mascotas      = "${aws_apigatewayv2_api.main.api_endpoint}/api/mascotas"
+      geo           = "${aws_apigatewayv2_api.main.api_endpoint}/api/geo"
+      coincidencias = "${aws_apigatewayv2_api.main.api_endpoint}/api/coincidencias"
+      bff           = "${aws_apigatewayv2_api.main.api_endpoint}/api"
+    }
+  }
+}
