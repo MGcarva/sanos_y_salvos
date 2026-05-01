@@ -1,6 +1,7 @@
 # Guía Completa de Despliegue — Sanos y Salvos en AWS Academy
 
-> **Tiempo estimado:** 45–60 minutos la primera vez.  
+> **Arquitectura:** API Gateway HTTP API → 5 Lambda functions → RDS · Redis · SQS · S3  
+> **Tiempo estimado:** 30–45 minutos la primera vez.  
 > **Importante:** AWS Academy borra toda la infraestructura al cerrar la sesión. Esta guía permite recrearla desde cero cada vez.
 
 ---
@@ -13,7 +14,7 @@ Cada bloque de comandos indica **dónde** ejecutarlo:
 |---|---|
 | 💻 **PowerShell local** | Terminal PowerShell en tu computador |
 | 🔵 **CMD / Git Bash local** | Terminal normal en tu computador |
-| 🟠 **SSH — dentro del EC2** | Después de conectarte por SSH al servidor |
+| ☁️ **AWS CLI** | Cualquier terminal con credenciales configuradas |
 | 📁 **Directorio requerido** | Carpeta donde debes estar antes de ejecutar |
 
 ---
@@ -27,45 +28,65 @@ Cada bloque de comandos indica **dónde** ejecutarlo:
 5. [Paso 2 — Crear infraestructura con Terraform](#5-paso-2--crear-infraestructura-con-terraform)
 6. [Paso 3 — Compilar los microservicios](#6-paso-3--compilar-los-microservicios)
 7. [Paso 4 — Construir y publicar imágenes Docker en ECR](#7-paso-4--construir-y-publicar-imágenes-docker-en-ecr)
-8. [Paso 5 — Inicializar bases de datos en RDS](#8-paso-5--inicializar-bases-de-datos-en-rds)
-9. [Paso 6 — Iniciar microservicios en EC2](#9-paso-6--iniciar-microservicios-en-ec2)
+8. [Paso 5 — Recargar las funciones Lambda](#8-paso-5--recargar-las-funciones-lambda)
+9. [Paso 6 — Inicializar bases de datos en RDS](#9-paso-6--inicializar-bases-de-datos-en-rds)
 10. [Paso 7 — Desplegar el frontend en S3](#10-paso-7--desplegar-el-frontend-en-s3)
 11. [Paso 8 — Verificación final](#11-paso-8--verificación-final)
-12. [Acceso a las bases de datos](#12-acceso-a-las-bases-de-datos)
-13. [Solución de problemas frecuentes](#13-solución-de-problemas-frecuentes)
-14. [Destruir la infraestructura](#14-destruir-la-infraestructura)
-15. [Variables y credenciales de referencia](#15-variables-y-credenciales-de-referencia)
-16. [Checklist rápido](#16-checklist-rápido)
+12. [Cómo funciona la mensajería SQS](#12-cómo-funciona-la-mensajería-sqs)
+13. [Modelo de datos](#13-modelo-de-datos)
+14. [Acceso a las bases de datos](#14-acceso-a-las-bases-de-datos)
+15. [Solución de problemas frecuentes](#15-solución-de-problemas-frecuentes)
+16. [Destruir la infraestructura](#16-destruir-la-infraestructura)
+17. [Variables y credenciales de referencia](#17-variables-y-credenciales-de-referencia)
+18. [Checklist rápido](#18-checklist-rápido)
 
 ---
 
 ## 1. Arquitectura general
 
 ```
-Internet
-  └─> ALB (puerto 80)
-        ├── /api/*  ──────────────> EC2:8080 (bff-service)
-        └── /*      ──────────────> S3 (frontend React estático)
+Internet (HTTPS)
+  └─> AWS API Gateway HTTP API
+        ├── ANY /api/auth/{proxy+}          → Lambda: auth-service       (puerto 8081)
+        ├── ANY /api/mascotas/{proxy+}      → Lambda: ms-mascotas         (puerto 8082)
+        ├── ANY /api/geo/{proxy+}           → Lambda: ms-geolocalizacion  (puerto 8083)
+        ├── ANY /api/coincidencias/{proxy+} → Lambda: ms-coincidencias    (puerto 8084)
+        └── ANY /api/{proxy+}               → Lambda: bff-service         (puerto 8080, fallback)
 
-EC2 t3.medium (Docker)
-  ├── bff-service        :8080  → proxy a los 4 microservicios
-  ├── auth-service       :8081  → autenticación JWT + Redis
-  ├── ms-mascotas        :8082  → reportes de mascotas + S3
-  ├── ms-geolocalizacion :8083  → ubicaciones + PostGIS
-  ├── ms-coincidencias   :8084  → algoritmo de matching
-  └── rabbitmq           :5672  → mensajería entre servicios
+Flujo asíncrono (SQS — reemplaza RabbitMQ):
+  ms-mascotas ──publica──> SQS: reportes-nuevos
+                                  └─> Lambda trigger ──> ms-geolocalizacion
+                                                              └──publica──> SQS: geo-completados
+                                                                                  └─> Lambda trigger ──> ms-coincidencias
+                                                                                                              └──publica──> SQS: notificaciones
 
-RDS PostgreSQL 15 (subred privada)
-  ├── auth_db
-  ├── mascotas_db
-  ├── geolocalizacion_db
-  └── coincidencias_db
+RDS PostgreSQL 15 (Multi-AZ: us-east-1a primaria / us-east-1b standby)
+  ├── auth_db            → usuarios, roles, tokens
+  ├── mascotas_db        → reportes, especies, razas
+  ├── geolocalizacion_db → ubicaciones + PostGIS
+  └── coincidencias_db   → coincidencias + pg_trgm
 
-ElastiCache Redis 7   → sesiones y caché del BFF
-S3 bucket             → fotos de mascotas
-S3 bucket             → frontend estático
-ECR                   → registro de imágenes Docker
+ElastiCache Redis 7  → sesiones JWT y caché BFF
+S3 bucket            → fotos de mascotas + frontend estático
+ECR                  → imágenes Docker (una por microservicio)
+CloudWatch Logs      → logs de cada Lambda (/aws/lambda/sanos-*)
+
+Alta disponibilidad:
+  Lambdas en VPC con subnets en us-east-1a Y us-east-1b
+  → si una AZ falla, AWS redirige invocaciones a la otra AZ automáticamente
+  → RDS failover automático a standby en ~60 segundos
 ```
+
+**¿Por qué Lambda en lugar de EC2?**
+
+| Aspecto | EC2 + Docker (anterior) | Lambda (actual) |
+|---|---|---|
+| Escalado | Manual, instancia fija | Automático por petición |
+| Alta disponibilidad | Una sola AZ activa | Multi-AZ nativo |
+| Mantenimiento | SSH, actualizaciones OS | Cero — AWS gestiona todo |
+| Costo | Instancia siempre encendida | Solo pagas por invocación |
+| AWS Academy compatible | ✅ | ✅ (usa LabRole existente) |
+| RabbitMQ | ❌ Requiere contenedor extra | ✅ SQS gestionado, sin servidor |
 
 ---
 
@@ -78,11 +99,11 @@ Instala estas herramientas **en tu computador local** antes de empezar:
 | AWS CLI | v2 | https://aws.amazon.com/cli/ |
 | Terraform | 1.5+ | https://developer.hashicorp.com/terraform/downloads |
 | Docker Desktop | Cualquiera | https://www.docker.com/products/docker-desktop/ |
-| Java JDK | 21 o 25 | https://adoptium.net/ |
+| Java JDK | 21 | https://adoptium.net/ |
 | Maven | 3.8+ | https://maven.apache.org/download.cgi |
 | Node.js + npm | 18+ | https://nodejs.org/ |
 | Git | Cualquiera | https://git-scm.com/ |
-| OpenSSH | Incluido en Windows 10+ | — |
+| psql (PostgreSQL client) | 15+ | https://www.postgresql.org/download/ |
 
 💻 **PowerShell local** — Verifica que todo esté instalado:
 
@@ -94,6 +115,7 @@ java -version
 mvn -version
 node --version
 npm --version
+psql --version
 ```
 
 ---
@@ -104,44 +126,47 @@ El proyecto usa **dos repositorios** que deben estar clonados en tu computador:
 
 ```
 Sanos y salvos/
-├── Sanos-y-Salvos/          ← código fuente microservicios + frontend
+├── Sanos-y-Salvos/              ← código fuente microservicios + frontend
 │   ├── auth-service/
+│   │   └── Dockerfile           ← incluye Lambda Web Adapter
 │   ├── ms-mascotas/
+│   │   └── Dockerfile           ← incluye Lambda Web Adapter
 │   ├── ms-geolocalizacion/
+│   │   └── Dockerfile           ← incluye Lambda Web Adapter
 │   ├── ms-coincidencias/
+│   │   └── Dockerfile           ← incluye Lambda Web Adapter
 │   ├── bff-service/
+│   │   └── Dockerfile           ← incluye Lambda Web Adapter
 │   └── frontend/
 │
-└── sanos_y_salvos/          ← infraestructura Terraform  ← ESTÁS AQUÍ
+└── sanos_y_salvos/              ← infraestructura Terraform  ← ESTÁS AQUÍ
     ├── provider.tf
     ├── variables.tf
-    ├── credentials.tf        ← NO está en GitHub (gitignore), crear manualmente
-    ├── ec2.tf
-    ├── alb.tf
+    ├── credentials.tf            ← ⚠️ NO en GitHub — crear manualmente
+    ├── vpc.tf
+    ├── security-groups.tf
     ├── rds.tf
     ├── elasticache.tf
     ├── ecr.tf
-    ├── vpc.tf
-    ├── security-groups.tf
-    ├── user-data.sh
+    ├── s3.tf
+    ├── sqs.tf                   ← 3 colas SQS + DLQs
+    ├── lambda.tf                ← 5 funciones Lambda
+    ├── api-gateway.tf           ← HTTP API + rutas
+    ├── outputs.tf
+    ├── init-databases.sql
     ├── update-credentials.ps1
-    ├── master-deploy.ps1
-    └── smoke-test.ps1
+    └── deploy-frontend.ps1
 ```
 
 💻 **PowerShell local** — Clona los repositorios si aún no los tienes:
 
 ```powershell
-# Crea la carpeta contenedora
 mkdir "C:\proyectos\sanos-y-salvos"
 cd "C:\proyectos\sanos-y-salvos"
 
-# Clona ambos repos
 git clone https://github.com/tu-org/Sanos-y-Salvos.git
 git clone https://github.com/tu-org/sanos_y_salvos.git
 ```
-
-> **Nota:** El archivo `credentials.tf` contiene las credenciales temporales de AWS Academy y **nunca se sube a GitHub**. Debes crearlo manualmente en cada sesión (el script `update-credentials.ps1` lo hace automáticamente).
 
 ---
 
@@ -150,10 +175,10 @@ git clone https://github.com/tu-org/sanos_y_salvos.git
 ### 4.1 Obtener las credenciales desde el portal
 
 1. Ingresa a **AWS Academy Learner Lab**
-2. Haz clic en **Start Lab** y espera que el ícono quede en verde
+2. Haz clic en **Start Lab** y espera que el ícono quede en **verde**
 3. Haz clic en **AWS Details** (panel derecho)
 4. Copia las 3 líneas: `aws_access_key_id`, `aws_secret_access_key`, `aws_session_token`
-5. También anota tu **Account ID** (12 dígitos) visible en la consola AWS arriba a la derecha
+5. Anota tu **Account ID** (12 dígitos) visible en la consola AWS arriba a la derecha
 
 ### 4.2 Actualizar credenciales con el script
 
@@ -163,29 +188,14 @@ git clone https://github.com/tu-org/sanos_y_salvos.git
 
 ```powershell
 cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-
 .\update-credentials.ps1
 ```
 
 El script te pedirá que pegues las 3 líneas de AWS Details y actualizará `credentials.tf` automáticamente.
 
-### 4.3 Actualizar el Account ID en variables.tf
+### 4.3 Verificar que las credenciales funcionan
 
-📁 **Directorio:** `sanos_y_salvos/`
-
-Abre el archivo `variables.tf` y cambia el valor de `aws_account_id`:
-
-```hcl
-variable "aws_account_id" {
-  description = "ID de la cuenta AWS Academy"
-  type        = string
-  default     = "111837322528"   # ← reemplaza con tu Account ID real
-}
-```
-
-### 4.4 Verificar que las credenciales funcionan
-
-💻 **PowerShell local** — Ejecuta desde cualquier directorio:
+☁️ **AWS CLI:**
 
 ```powershell
 aws sts get-caller-identity
@@ -193,7 +203,7 @@ aws sts get-caller-identity
 
 Deberías ver tu Account ID en la respuesta. Si da error, repite el paso 4.2.
 
-> **Importante:** Las credenciales de AWS Academy expiran cada ~4 horas. Si algo falla con mensajes de `ExpiredTokenException`, repite los pasos 4.2 y 4.4.
+> **Importante:** Las credenciales de AWS Academy expiran cada ~4 horas. Si algo falla con `ExpiredTokenException`, repite los pasos 4.2 y 4.3.
 
 ---
 
@@ -201,29 +211,9 @@ Deberías ver tu Account ID en la respuesta. Si da error, repite el paso 4.2.
 
 ### 5.1 Asegúrate de que Docker Desktop esté corriendo
 
-Ábrelo desde el menú inicio si no está activo. Espera a que el ícono de la ballena quede estático (no animado).
+Ábrelo desde el menú inicio. Espera a que el ícono de la ballena quede **estático** (no animado).
 
-### 5.2 Crear el Key Pair para SSH
-
-📁 **Directorio:** `sanos_y_salvos/`
-
-💻 **PowerShell local:**
-
-```powershell
-cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-
-# Verificar si ya existe
-aws ec2 describe-key-pairs --key-names "sanos-y-salvos-key" 2>$null
-
-# Si el comando anterior da error (no existe), crearlo:
-$keyResult = aws ec2 create-key-pair --key-name "sanos-y-salvos-key" --output json | ConvertFrom-Json
-$keyResult.KeyMaterial | Out-File -FilePath "sanos-y-salvos-key.pem" -Encoding ASCII
-Write-Host "Key pair creado y guardado en sanos-y-salvos-key.pem"
-```
-
-> Guarda bien el archivo `sanos-y-salvos-key.pem` — lo necesitarás para conectarte al EC2 por SSH.
-
-### 5.3 Limpiar el estado anterior de Terraform
+### 5.2 Limpiar el estado anterior de Terraform
 
 📁 **Directorio:** `sanos_y_salvos/`
 
@@ -239,9 +229,9 @@ if (Test-Path "terraform.tfstate") {
 }
 ```
 
-> Esto es necesario porque AWS Academy asigna una cuenta nueva en cada sesión. El estado anterior apunta a recursos que ya no existen.
+> Esto es necesario porque AWS Academy asigna una cuenta nueva en cada sesión.
 
-### 5.4 Inicializar y aplicar Terraform
+### 5.3 Inicializar y aplicar Terraform
 
 📁 **Directorio:** `sanos_y_salvos/`
 
@@ -255,13 +245,31 @@ terraform init -upgrade
 terraform apply -auto-approve
 ```
 
-Esto tarda **10–15 minutos**. Crea: VPC, subnets, EC2, ALB, RDS, ElastiCache, ECR, Security Groups.
+Esto tarda **10–15 minutos**. Crea:
+- VPC con subnets privadas y públicas en 2 AZs
+- Security Groups para Lambda, RDS, Redis
+- RDS PostgreSQL 15 (Multi-AZ)
+- ElastiCache Redis
+- ECR (5 repositorios)
+- S3 (fotos + frontend)
+- SQS (3 colas + 2 DLQs)
+- 5 funciones Lambda
+- API Gateway HTTP API con 5 rutas
 
-Al terminar verás los outputs. Guárdalos o consúltalos con:
+Al terminar verás los outputs. Guárdalos:
 
 ```powershell
+terraform output > outputs-$(Get-Date -Format 'yyyyMMdd').txt
 terraform output
 ```
+
+**Output más importante:**
+```
+api_gateway_url = "https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com"
+rds_host        = "sanos-y-salvos-postgres.xxxx.us-east-1.rds.amazonaws.com"
+```
+
+> **Si hay error `ResourceNotFoundException` en Lambda:** Las imágenes ECR aún no existen. Es normal — las Lambdas quedan en estado `pending` hasta el paso 5.
 
 > **Si hay error `DBInstanceAlreadyExists`:** El RDS quedó de una sesión anterior. Impórtalo:
 > ```powershell
@@ -280,615 +288,595 @@ terraform output
 ```powershell
 cd "C:\proyectos\sanos-y-salvos\Sanos-y-Salvos"
 
-mvn clean package "-Dmaven.test.skip=true" --no-transfer-progress
+# Compilar todos los microservicios en paralelo
+$servicios = @("auth-service", "ms-mascotas", "ms-geolocalizacion", "ms-coincidencias", "bff-service")
+
+foreach ($s in $servicios) {
+    Write-Host "Compilando $s..."
+    Set-Location $s
+    mvn clean package -DskipTests -q
+    Set-Location ..
+    Write-Host "✅ $s compilado"
+}
 ```
 
-> **Por qué `-Dmaven.test.skip=true` y no `-DskipTests`?**  
-> `-DskipTests` compila los tests pero no los ejecuta. `-Dmaven.test.skip=true` omite también la compilación de tests, que tienen dependencias que pueden fallar en entornos sin servicios corriendo.
-
-Al finalizar deberías ver:
-
-```
-[INFO] auth-service .......... SUCCESS [ 10 s]
-[INFO] ms-mascotas ........... SUCCESS [  4 s]
-[INFO] ms-geolocalizacion .... SUCCESS [  4 s]
-[INFO] ms-coincidencias ...... SUCCESS [  3 s]
-[INFO] bff-service ........... SUCCESS [  3 s]
-[INFO] BUILD SUCCESS
-```
-
-### Verificar que los JARs existen
-
-💻 **PowerShell local** — Desde `Sanos-y-Salvos/`:
+O compila individualmente:
 
 ```powershell
-Get-ChildItem -Path . -Recurse -Filter "*.jar" |
-  Where-Object { $_.FullName -like "*\target\*" -and $_.Name -notlike "*original*" } |
-  Select-Object Name, FullName
+cd auth-service          && mvn clean package -DskipTests && cd ..
+cd ms-mascotas           && mvn clean package -DskipTests && cd ..
+cd ms-geolocalizacion    && mvn clean package -DskipTests && cd ..
+cd ms-coincidencias      && mvn clean package -DskipTests && cd ..
+cd bff-service           && mvn clean package -DskipTests && cd ..
 ```
-
-Deberías ver 5 archivos `.jar`.
 
 ---
 
 ## 7. Paso 4 — Construir y publicar imágenes Docker en ECR
 
-### 7.1 Configurar Docker para ECR
+### 7.1 Login a ECR
 
-AWS Academy usa credenciales temporales con session token. El método estándar de `docker login` puede fallar porque Docker Desktop intenta usar un `credsStore` que no soporta session tokens. Este bloque lo soluciona escribiendo la auth directamente:
+☁️ **AWS CLI** — usa el comando del output `ecr_login_command`:
 
-📁 **Directorio:** `sanos_y_salvos/` (para leer el output de Terraform)
+```powershell
+# Obtener el comando exacto de Terraform output
+cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
+terraform output -raw ecr_login_command | Invoke-Expression
+```
 
-💻 **PowerShell local:**
+O manualmente (reemplaza `<ACCOUNT_ID>`):
+```powershell
+aws ecr get-login-password --region us-east-1 | `
+  docker login --username AWS --password-stdin `
+  <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com
+```
+
+### 7.2 Obtener las URLs de ECR
 
 ```powershell
 cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-
-$Region      = "us-east-1"
-$AccountId   = (aws sts get-caller-identity --query Account --output text)
-$EcrRegistry = "$AccountId.dkr.ecr.$Region.amazonaws.com"
-
-# Obtener token y escribir config.json sin credsStore
-$ecrToken   = aws ecr get-login-password --region $Region
-$authBase64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("AWS:$ecrToken"))
-$configJson = "{`"auths`":{`"$EcrRegistry`":{`"auth`":`"$authBase64`"}}}"
-
-$dockerConfigPath = "$env:USERPROFILE\.docker\config.json"
-$sw = New-Object System.IO.StreamWriter($dockerConfigPath, $false, [System.Text.UTF8Encoding]::new($false))
-$sw.Write($configJson)
-$sw.Close()
-
-Write-Host "Docker configurado para ECR: $EcrRegistry"
+terraform output docker_push_commands
 ```
 
-### 7.2 Construir y publicar las 5 imágenes
-
-📁 **Directorio:** Puedes estar en cualquiera, los paths son absolutos
-
-💻 **PowerShell local:**
-
-```powershell
-$AppDir  = "C:\proyectos\sanos-y-salvos\Sanos-y-Salvos"
-$Project = "sanos-y-salvos"
-
-$services = @("auth-service", "ms-mascotas", "ms-geolocalizacion", "ms-coincidencias", "bff-service")
-
-foreach ($svc in $services) {
-    $imgTag = "$EcrRegistry/$Project/$svc`:latest"
-    $svcDir = Join-Path $AppDir $svc
-
-    Write-Host "=== Building $svc ===" -ForegroundColor Cyan
-    docker build -t $imgTag -f "$svcDir\Dockerfile.deploy" $svcDir
-
-    Write-Host "=== Pushing $svc ===" -ForegroundColor Cyan
-    docker push $imgTag
-
-    Write-Host "[OK] $svc publicado en ECR" -ForegroundColor Green
+Ejemplo de salida:
+```
+{
+  "auth-service"       = "docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/auth-service:latest"
+  "bff-service"        = "docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/bff-service:latest"
+  "ms-coincidencias"   = "docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/ms-coincidencias:latest"
+  "ms-geolocalizacion" = "docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/ms-geolocalizacion:latest"
+  "ms-mascotas"        = "docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/ms-mascotas:latest"
 }
 ```
 
-> **Tiempo estimado:** ~3–5 minutos en total. Los `Dockerfile.deploy` copian el JAR ya compilado en una imagen Alpine ligera, sin recompilar desde cero.
+### 7.3 Build y push de cada microservicio
+
+📁 **Directorio:** `Sanos-y-Salvos/`
+
+Reemplaza `<ECR_BASE>` con tu URL base (p.ej. `123456789012.dkr.ecr.us-east-1.amazonaws.com`):
+
+```powershell
+$ECR_BASE = "<ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com"
+
+$servicios = @(
+    @{ nombre = "auth-service";       carpeta = "auth-service" },
+    @{ nombre = "bff-service";        carpeta = "bff-service" },
+    @{ nombre = "ms-mascotas";        carpeta = "ms-mascotas" },
+    @{ nombre = "ms-geolocalizacion"; carpeta = "ms-geolocalizacion" },
+    @{ nombre = "ms-coincidencias";   carpeta = "ms-coincidencias" }
+)
+
+foreach ($s in $servicios) {
+    Write-Host "🐳 Build y push: $($s.nombre)..."
+    docker build -t $s.nombre ./$($s.carpeta)
+    docker tag "$($s.nombre):latest" "$ECR_BASE/$($s.nombre):latest"
+    docker push "$ECR_BASE/$($s.nombre):latest"
+    Write-Host "✅ $($s.nombre) publicado"
+}
+```
+
+> **¿Por qué las imágenes funcionan en Lambda?**  
+> Cada Dockerfile incluye esta línea en el stage final:
+> ```dockerfile
+> COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
+> ```
+> El **Lambda Web Adapter** convierte los eventos HTTP de API Gateway en peticiones HTTP estándar que Spring Boot procesa normalmente. **No hay cambios de código en los microservicios.**
 
 ---
 
-## 8. Paso 5 — Inicializar bases de datos en RDS
+## 8. Paso 5 — Recargar las funciones Lambda
 
-El EC2 intenta crear las bases de datos al arrancar, pero a veces RDS no está listo en ese momento. Este paso garantiza que existan antes de levantar los microservicios.
+Después de subir las imágenes a ECR, actualiza cada Lambda para que use la nueva imagen:
 
-### 8.1 Conectarse al EC2 por SSH
-
-📁 **Directorio:** `sanos_y_salvos/`
-
-💻 **PowerShell local** — Obtener la IP del EC2:
+☁️ **AWS CLI:**
 
 ```powershell
-cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-$Ec2Ip = terraform output -raw ec2_public_ip
-Write-Host "EC2 IP: $Ec2Ip"
+$ACCOUNT_ID = "<tu-account-id>"
+$ECR_BASE   = "$ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com"
+
+$lambdas = @(
+    @{ fn = "sanos-auth-service";       img = "auth-service" },
+    @{ fn = "sanos-bff-service";        img = "bff-service" },
+    @{ fn = "sanos-ms-mascotas";        img = "ms-mascotas" },
+    @{ fn = "sanos-ms-geolocalizacion"; img = "ms-geolocalizacion" },
+    @{ fn = "sanos-ms-coincidencias";   img = "ms-coincidencias" }
+)
+
+foreach ($l in $lambdas) {
+    Write-Host "🔄 Actualizando Lambda: $($l.fn)..."
+    aws lambda update-function-code `
+        --function-name $l.fn `
+        --image-uri "$ECR_BASE/$($l.img):latest" | Out-Null
+    Write-Host "✅ $($l.fn) actualizado"
+}
 ```
 
-🟠 **Abre una nueva ventana de PowerShell y conéctate por SSH:**
+Espera ~30 segundos y verifica que están activas:
 
 ```powershell
-cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-
-ssh -i "sanos-y-salvos-key.pem" -o StrictHostKeyChecking=no ec2-user@<EC2_IP>
-```
-
-> Reemplaza `<EC2_IP>` con el valor obtenido arriba. Ahora estás **dentro del servidor EC2**.
-
-### 8.2 Crear las 4 bases de datos
-
-🟠 **SSH — dentro del EC2:**
-
-```bash
-export PGPASSWORD="SanosYSalvos2026!"
-DB_HOST="<RDS_ENDPOINT>"   # Ver terraform output -> rds_endpoint
-
-for db in auth_db mascotas_db geolocalizacion_db coincidencias_db; do
-    psql -h $DB_HOST -U sanosadmin -d postgres -c "CREATE DATABASE $db;" 2>&1
-done
-
-# Extensión para búsqueda de texto en coincidencias
-psql -h $DB_HOST -U sanosadmin -d coincidencias_db -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
-
-echo "=== Bases de datos creadas ==="
-psql -h $DB_HOST -U sanosadmin -d postgres -c "\l" | grep _db
-```
-
-> Las tablas se crean automáticamente cuando Spring Boot arranca con `ddl-auto: update`. Solo necesitas crear las bases de datos vacías.
-
-🟠 **SSH — dentro del EC2** — Sal del SSH cuando termines:
-
-```bash
-exit
+aws lambda list-functions --query "Functions[?starts_with(FunctionName, 'sanos')].{Nombre:FunctionName, Estado:State}" --output table
 ```
 
 ---
 
-## 9. Paso 6 — Iniciar microservicios en EC2
+## 9. Paso 6 — Inicializar bases de datos en RDS
 
-### 9.1 Corregir el script de inicio
-
-📁 **Directorio:** `sanos_y_salvos/`
-
-💻 **PowerShell local:**
+### 9.1 Obtener el host de RDS
 
 ```powershell
 cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-$Ec2Ip = terraform output -raw ec2_public_ip
-
-# Corrige un posible typo en la variable $PROYECTO dentro del script
-ssh -i "sanos-y-salvos-key.pem" -o StrictHostKeyChecking=no "ec2-user@$Ec2Ip" `
-    "sed -i 's/\$PROJETO/\$PROYECTO/g' /home/ec2-user/start-services.sh && echo 'Script corregido OK'"
+$RDS_HOST = terraform output -raw rds_host
+Write-Host "RDS Host: $RDS_HOST"
 ```
 
-### 9.2 Lanzar los microservicios
+### 9.2 Ejecutar el script SQL
 
-📁 **Directorio:** `sanos_y_salvos/`
+El script `init-databases.sql` crea las 4 bases de datos, tablas, índices y datos iniciales (roles, estados, especies, razas):
 
-💻 **PowerShell local:**
+🔵 **CMD / Git Bash:**
+
+```bash
+psql -h $RDS_HOST -U sanosadmin -d postgres -f init-databases.sql
+```
+
+💻 **PowerShell:**
 
 ```powershell
-ssh -i "sanos-y-salvos-key.pem" -o StrictHostKeyChecking=no "ec2-user@$Ec2Ip" `
-    'nohup /home/ec2-user/start-services.sh > /tmp/start-output.log 2>&1 & echo "Iniciado PID $!"'
+$env:PGPASSWORD = "tu-password-rds"
+psql -h $RDS_HOST -U sanosadmin -d postgres -f init-databases.sql
 ```
 
-El script hace internamente:
-1. Login a ECR desde el EC2
-2. `docker pull` de las 5 imágenes
-3. `docker run` de cada microservicio con sus variables de entorno
-4. Espera 90 segundos para que los JVMs arranquen
-5. Levanta el BFF al final
+> **Nota:** Si no puedes conectarte a RDS directamente (la instancia está en subred privada), necesitas un **bastion host** o tunnel SSH. Para AWS Academy, la manera más sencilla es crear temporalmente un EC2 en la subred pública, hacer SSH y ejecutar el psql desde allí.
 
-**Espera ~3 minutos** y luego verifica:
+### 9.3 Verificar la inicialización
 
-### 9.3 Verificar contenedores
-
-📁 **Directorio:** `sanos_y_salvos/`
-
-💻 **PowerShell local:**
-
-```powershell
-ssh -i "sanos-y-salvos-key.pem" -o StrictHostKeyChecking=no "ec2-user@$Ec2Ip" `
-    "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+```sql
+-- Conectarse a mascotas_db y verificar
+psql -h $RDS_HOST -U sanosadmin -d mascotas_db -c "
+SELECT e.nombre AS especie, count(r.id) AS razas
+FROM especies e
+LEFT JOIN razas r ON r.especie_id = e.id
+GROUP BY e.nombre ORDER BY e.nombre;
+"
 ```
 
-Deberías ver 6 contenedores activos:
-
-```
-NAMES                STATUS          PORTS
-bff-service          Up 2 minutes    0.0.0.0:8080->8080/tcp
-ms-coincidencias     Up 2 minutes    0.0.0.0:8084->8084/tcp
-ms-geolocalizacion   Up 2 minutes    0.0.0.0:8083->8083/tcp
-ms-mascotas          Up 2 minutes    0.0.0.0:8082->8082/tcp
-auth-service         Up 2 minutes    0.0.0.0:8081->8081/tcp
-rabbitmq             Up 5 minutes    0.0.0.0:5672->5672/tcp
-```
-
-### 9.4 Verificar health de los microservicios
-
-💻 **PowerShell local** — Desde cualquier directorio:
-
-```powershell
-# Verificar health desde dentro del EC2
-ssh -i "sanos-y-salvos-key.pem" -o StrictHostKeyChecking=no "ec2-user@$Ec2Ip" @'
-for port in 8080 8081 8082 8083 8084; do
-    status=$(curl -s --connect-timeout 5 http://localhost:$port/actuator/health \
-             | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','?'))" 2>/dev/null \
-             || echo "NO_RESP")
-    echo "  :$port -> $status"
-done
-'@
-```
-
-Todos deben mostrar `UP`.
-
-### 9.5 Ver logs de un microservicio
-
-Si alguno falla, puedes ver sus logs:
-
-💻 **PowerShell local:**
-
-```powershell
-ssh -i "sanos-y-salvos-key.pem" -o StrictHostKeyChecking=no "ec2-user@$Ec2Ip" `
-    "docker logs auth-service 2>&1 | tail -40"
-```
-
-### 9.6 Reiniciar microservicios
-
-Si necesitas reiniciarlos todos después de un cambio:
-
-💻 **PowerShell local:**
-
-```powershell
-ssh -i "sanos-y-salvos-key.pem" -o StrictHostKeyChecking=no "ec2-user@$Ec2Ip" `
-    "docker restart auth-service ms-mascotas ms-geolocalizacion ms-coincidencias bff-service"
-```
+Deberías ver las 5 especies (PERRO, GATO, AVE, CONEJO, OTRO) con sus razas.
 
 ---
 
 ## 10. Paso 7 — Desplegar el frontend en S3
 
-### 10.1 Obtener la URL del ALB
-
-📁 **Directorio:** `sanos_y_salvos/`
-
-💻 **PowerShell local:**
-
-```powershell
-cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-$AlbDns    = terraform output -raw alb_dns
-$AccountId = (aws sts get-caller-identity --query Account --output text)
-Write-Host "ALB: $AlbDns"
-```
-
-### 10.2 Configurar la URL de la API
+### 10.1 Compilar el frontend
 
 📁 **Directorio:** `Sanos-y-Salvos/frontend/`
-
-💻 **PowerShell local:**
 
 ```powershell
 cd "C:\proyectos\sanos-y-salvos\Sanos-y-Salvos\frontend"
 
-# Crear el archivo de variables de entorno para producción
-Set-Content -Path ".env.production" -Value "VITE_API_BASE_URL=http://$AlbDns/api" -Encoding UTF8
-Write-Host "API URL configurada: http://$AlbDns/api"
-```
-
-### 10.3 Compilar el frontend
-
-📁 **Directorio:** `Sanos-y-Salvos/frontend/`
-
-💻 **PowerShell local:**
-
-```powershell
-cd "C:\proyectos\sanos-y-salvos\Sanos-y-Salvos\frontend"
+# Configura la URL de la API (usa tu api_gateway_url real)
+$API_URL = (terraform -chdir="../../sanos_y_salvos" output -raw api_gateway_url)
+"VITE_API_URL=$API_URL" | Out-File -FilePath ".env.production" -Encoding utf8
 
 npm install
 npm run build
 ```
 
-Al terminar se crea la carpeta `dist/` con los archivos estáticos listos para subir a S3.
+### 10.2 Subir al bucket S3
 
-### 10.4 Crear el bucket S3 y publicar
-
-📁 **Directorio:** `Sanos-y-Salvos/frontend/`
-
-💻 **PowerShell local:**
+☁️ **AWS CLI:**
 
 ```powershell
-cd "C:\proyectos\sanos-y-salvos\Sanos-y-Salvos\frontend"
+$BUCKET = (terraform -chdir="../../sanos_y_salvos" output -raw s3_bucket)
+aws s3 sync dist/ s3://$BUCKET/ --delete --cache-control "max-age=31536000" --exclude "index.html"
+aws s3 cp dist/index.html s3://$BUCKET/index.html --cache-control "no-cache"
+```
 
-$S3Bucket = "sanos-y-salvos-frontend-$AccountId"
+### 10.3 Obtener la URL del frontend
 
-# Crear bucket si no existe
-aws s3api head-bucket --bucket $S3Bucket 2>$null
-if ($LASTEXITCODE -ne 0) {
-    aws s3api create-bucket --bucket $S3Bucket --region us-east-1
-    Write-Host "Bucket creado: $S3Bucket"
-}
-
-# Configurar acceso público y sitio web estático
-aws s3api delete-public-access-block --bucket $S3Bucket
-aws s3api put-bucket-policy --bucket $S3Bucket --policy "{
-  `"Version`": `"2012-10-17`",
-  `"Statement`": [{
-    `"Effect`": `"Allow`",
-    `"Principal`": `"*`",
-    `"Action`": `"s3:GetObject`",
-    `"Resource`": `"arn:aws:s3:::$S3Bucket/*`"
-  }]
-}"
-aws s3 website "s3://$S3Bucket" --index-document index.html --error-document index.html
-
-# Subir archivos compilados
-aws s3 sync dist/ "s3://$S3Bucket" --delete --cache-control "no-cache" --exclude "assets/*"
-aws s3 sync dist/assets/ "s3://$S3Bucket/assets/" --cache-control "max-age=31536000" --delete
-
-Write-Host ""
-Write-Host "Frontend disponible en:" -ForegroundColor Green
-Write-Host "http://$S3Bucket.s3-website-us-east-1.amazonaws.com" -ForegroundColor Cyan
+```powershell
+Write-Host "Frontend URL: http://$BUCKET.s3-website-us-east-1.amazonaws.com"
 ```
 
 ---
 
 ## 11. Paso 8 — Verificación final
 
-### 11.1 Smoke test automático
-
-📁 **Directorio:** `sanos_y_salvos/`
-
-💻 **PowerShell local:**
+### 11.1 Probar el API Gateway
 
 ```powershell
-cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-.\smoke-test.ps1
+$API = (terraform -chdir="C:\proyectos\sanos-y-salvos\sanos_y_salvos" output -raw api_gateway_url)
+
+# 1. Catálogo de especies (sin autenticación)
+Invoke-RestMethod -Uri "$API/api/mascotas/especies" -Method GET
+
+# 2. Catálogo de razas de perros
+Invoke-RestMethod -Uri "$API/api/mascotas/razas?especieId=1" -Method GET
+
+# 3. Health check del BFF
+Invoke-RestMethod -Uri "$API/api/health" -Method GET
 ```
 
-### 11.2 Verificación manual
-
-📁 **Directorio:** Cualquiera
-
-💻 **PowerShell local:**
+### 11.2 Probar autenticación
 
 ```powershell
-# 1. Health del BFF via ALB
-Invoke-WebRequest -Uri "http://$AlbDns/api/actuator/health" -UseBasicParsing | Select-Object -ExpandProperty Content
+# Registrar usuario de prueba
+$body = @{
+    nombre   = "Test Usuario"
+    email    = "test@test.com"
+    password = "Test1234!"
+} | ConvertTo-Json
 
-# 2. Registro de usuario de prueba
-$body = '{"nombre":"Test","email":"test@sanos.cl","password":"Test2026!"}'
-Invoke-WebRequest -Uri "http://$AlbDns/api/auth/register" `
-    -Method POST -Body $body -ContentType "application/json" -UseBasicParsing |
-    Select-Object -ExpandProperty Content
+$resp = Invoke-RestMethod -Uri "$API/api/auth/register" -Method POST `
+    -ContentType "application/json" -Body $body
 
-# 3. Frontend
-(Invoke-WebRequest -Uri "http://sanos-y-salvos-frontend-$AccountId.s3-website-us-east-1.amazonaws.com" -UseBasicParsing).StatusCode
+Write-Host "Registro: $($resp | ConvertTo-Json)"
+
+# Login
+$login = @{ email = "test@test.com"; password = "Test1234!" } | ConvertTo-Json
+$token = (Invoke-RestMethod -Uri "$API/api/auth/login" -Method POST `
+    -ContentType "application/json" -Body $login).token
+Write-Host "Token JWT obtenido: $($token.Substring(0,20))..."
 ```
 
-### 11.3 URLs finales de la aplicación
+### 11.3 Probar creación de reporte
 
-| Recurso | URL |
-|---|---|
-| **Aplicación completa** | `http://<alb_dns>` |
-| **Frontend S3** | `http://sanos-y-salvos-frontend-<account_id>.s3-website-us-east-1.amazonaws.com` |
-| **API REST** | `http://<alb_dns>/api` |
-| **Health BFF** | `http://<alb_dns>/api/actuator/health` |
-| **SSH al EC2** | `ssh -i sanos-y-salvos-key.pem ec2-user@<ec2_ip>` |
-| **RabbitMQ Panel** | `http://<ec2_ip>:15672` (user: sanosrabbit) |
+```powershell
+$headers = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
+
+$reporte = @{
+    tipo        = "PERDIDO"
+    especieId   = 1          # PERRO
+    razaId      = 1          # Labrador Retriever
+    nombre      = "Rocky"
+    color       = "Marrón"
+    tamano      = "GRANDE"
+    descripcion = "Perdido en el parque"
+    lat         = -33.4489
+    lng         = -70.6693
+    recompensa  = 50000
+} | ConvertTo-Json
+
+$nuevo = Invoke-RestMethod -Uri "$API/api/mascotas/reportes" `
+    -Method POST -Headers $headers -Body $reporte
+Write-Host "Reporte creado: $($nuevo.id)"
+```
+
+### 11.4 Verificar logs en CloudWatch
+
+En la consola AWS:  
+1. Ve a **CloudWatch → Log Groups**
+2. Busca `/aws/lambda/sanos-ms-mascotas`
+3. Verifica que aparece el log de la petición
+
+O desde CLI:
+```powershell
+aws logs tail /aws/lambda/sanos-ms-mascotas --follow
+aws logs tail /aws/lambda/sanos-ms-geolocalizacion --follow
+```
+
+### 11.5 Verificar flujo SQS
+
+```powershell
+# Ver mensajes en cola (si quedan sin procesar)
+$queueUrl = (terraform -chdir="C:\proyectos\sanos-y-salvos\sanos_y_salvos" output -raw sqs_reportes_nuevos_url)
+aws sqs get-queue-attributes --queue-url $queueUrl `
+    --attribute-names ApproximateNumberOfMessages,ApproximateNumberOfMessagesNotVisible
+```
 
 ---
 
-## 12. Acceso a las bases de datos
+## 12. Cómo funciona la mensajería SQS
 
-El RDS está en una subred privada. Para acceder desde tu computador necesitas un túnel SSH a través del EC2.
+**Flujo completo de un reporte perdido:**
 
-### Opción A — Tunnel con pgAdmin (recomendado, sin comandos extra)
-
-En pgAdmin → Register Server:
-
-**Pestaña Connection:**
-
-| Campo | Valor |
-|---|---|
-| Host | valor de `terraform output rds_endpoint` |
-| Port | `5432` |
-| Maintenance DB | `postgres` |
-| Username | `sanosadmin` |
-| Password | `SanosYSalvos2026!` |
-
-**Pestaña SSH Tunnel:**
-
-| Campo | Valor |
-|---|---|
-| Use SSH tunneling | ✅ ON |
-| Tunnel host | IP del EC2 (`terraform output ec2_public_ip`) |
-| Tunnel port | `22` |
-| Username | `ec2-user` |
-| Authentication | Identity file |
-| Identity file | Ruta completa al archivo `sanos-y-salvos-key.pem` |
-
-### Opción B — Tunnel manual por PowerShell
-
-📁 **Directorio:** `sanos_y_salvos/`
-
-💻 **PowerShell local** — Abre una ventana dedicada y déjala corriendo:
-
-```powershell
-cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-$Ec2Ip  = terraform output -raw ec2_public_ip
-$DbHost = terraform output -raw rds_endpoint
-
-# Deja esta ventana abierta. El puerto 5433 local apunta al RDS en AWS.
-ssh -i "sanos-y-salvos-key.pem" -L "5433:${DbHost}:5432" ec2-user@$Ec2Ip -N
+```
+1. POST /api/mascotas/reportes  (usuario crea reporte)
+        │
+        ▼
+   λ ms-mascotas
+   - Guarda reporte en mascotas_db (especie_id=1, raza_id=1)
+   - Publica ReporteNuevoEvent en SQS "reportes-nuevos"
+   - Responde HTTP 201 al cliente (inmediato)
+        │
+        ▼ (asíncrono — segundos después)
+   λ ms-geolocalizacion  (trigger SQS)
+   - Recibe ReporteNuevoEvent (con especie="PERRO", raza="Labrador" como strings)
+   - Guarda UbicacionReporte en geolocalizacion_db
+   - Geocodifica la dirección
+   - Calcula clusters espaciales
+   - Publica GeoCompletadoEvent en SQS "geo-completados"
+        │
+        ▼ (asíncrono — segundos después)
+   λ ms-coincidencias  (trigger SQS)
+   - Recibe GeoCompletadoEvent
+   - Busca reportes ENCONTRADO similares dentro de 5km
+   - Calcula score: color + distancia + raza + tamaño
+   - Guarda coincidencias en coincidencias_db
+   - Publica notificación en SQS "notificaciones"
 ```
 
-Luego conecta cualquier cliente SQL a `localhost:5433` con usuario `sanosadmin`.
+**Variables de entorno relevantes:**
 
-> Usa puerto `5433` (no `5432`) para evitar conflicto con PostgreSQL local si lo tienes instalado.
+| Variable | Dónde se usa | Valor |
+|---|---|---|
+| `SQS_REPORTES_NUEVOS_URL` | ms-mascotas | URL SQS del output Terraform |
+| `SQS_GEO_COMPLETADOS_URL` | ms-geolocalizacion, ms-mascotas | URL SQS del output Terraform |
+| `SQS_NOTIFICACIONES_URL` | ms-coincidencias | URL SQS del output Terraform |
 
-### Consultas SQL útiles
+Estas variables se inyectan automáticamente por Terraform en cada Lambda (ver `lambda.tf` → `environment.variables`).
 
-Una vez conectado con pgAdmin o psql:
+---
+
+## 13. Modelo de datos
+
+### mascotas_db
 
 ```sql
--- Conectar a una base de datos específica
+-- Catálogos normalizados (reemplazan strings hardcodeados)
+especies (id SERIAL PK, nombre VARCHAR(50) UNIQUE)
+  → PERRO, GATO, AVE, CONEJO, OTRO
+
+razas (id SERIAL PK, especie_id FK→especies, nombre VARCHAR(100))
+  → Labrador Retriever, Golden Retriever, Siamés, etc.
+
+-- Single Table Inheritance (Hibernate discriminator)
+reportes (
+  id UUID PK,
+  tipo VARCHAR(31),          -- "PERDIDO" | "ENCONTRADO"
+  user_id UUID,              -- FK lógica → auth_db.users
+  especie_id INTEGER FK → especies,
+  raza_id INTEGER FK → razas (nullable),
+  nombre, color, tamano, descripcion, foto_url,
+  estado VARCHAR(20),        -- ACTIVO | INACTIVO | RESUELTO
+  lat, lng, direccion, fecha_evento,
+  -- Solo para PERDIDO:
+  recompensa NUMERIC(38,2),
+  -- Solo para ENCONTRADO:
+  lugar_resguardo, tiene_collar BOOLEAN
+)
+```
+
+### Endpoints del catálogo (sin autenticación)
+
+```
+GET /api/mascotas/especies           → [{"id":1,"nombre":"PERRO"}, ...]
+GET /api/mascotas/razas?especieId=1  → [{"id":1,"nombre":"Labrador Retriever"}, ...]
+```
+
+### Crear un reporte (con autenticación)
+
+```json
+POST /api/mascotas/reportes
+{
+  "tipo": "PERDIDO",
+  "especieId": 1,
+  "razaId": 1,
+  "nombre": "Rocky",
+  "color": "Marrón con blanco",
+  "tamano": "GRANDE",
+  "descripcion": "Collar azul, muy amigable",
+  "lat": -33.4489,
+  "lng": -70.6693,
+  "recompensa": 50000
+}
+```
+
+Respuesta:
+```json
+{
+  "id": "uuid-...",
+  "tipo": "PERDIDO",
+  "especieId": 1,
+  "especieNombre": "PERRO",
+  "razaId": 1,
+  "razaNombre": "Labrador Retriever",
+  "nombre": "Rocky",
+  ...
+}
+```
+
+---
+
+## 14. Acceso a las bases de datos
+
+### Opciones de conexión
+
+**Opción A — Bastion host temporal (recomendado para Academy)**
+
+```powershell
+# 1. Lanzar EC2 temporal en la subred pública
+aws ec2 run-instances `
+    --image-id ami-0c02fb55956c7d316 `
+    --instance-type t3.micro `
+    --subnet-id <PUBLIC_SUBNET_ID> `
+    --security-group-ids <SG_ID> `
+    --key-name sanos-y-salvos-key `
+    --query "Instances[0].InstanceId" --output text
+
+# 2. Obtener IP pública
+aws ec2 describe-instances --instance-ids <ID> `
+    --query "Reservations[0].Instances[0].PublicIpAddress" --output text
+
+# 3. SSH + psql
+ssh -i sanos-y-salvos-key.pem ec2-user@<EC2_IP>
+psql -h <RDS_HOST> -U sanosadmin -d mascotas_db
+
+# 4. Terminar cuando termines
+aws ec2 terminate-instances --instance-ids <ID>
+```
+
+**Opción B — SSH Tunnel local**
+
+```bash
+# Crea el tunnel (requiere acceso SSH a algún host en la VPC)
+ssh -i sanos-y-salvos-key.pem -L 5433:<RDS_HOST>:5432 ec2-user@<BASTION_IP> -N &
+
+# Conectar vía tunnel
+psql -h localhost -p 5433 -U sanosadmin -d auth_db
+```
+
+### Consultas útiles
+
+```sql
+-- Ver todos los reportes con especie y raza
 \c mascotas_db
-
--- Ver todas las tablas
-\dt
-
--- Últimos reportes registrados
-SELECT id, nombre, tipo, especie, estado, created_at
-FROM reportes
-ORDER BY created_at DESC
+SELECT r.id, r.tipo, e.nombre AS especie, rz.nombre AS raza,
+       r.nombre, r.estado, r.created_at
+FROM reportes r
+JOIN especies e ON e.id = r.especie_id
+LEFT JOIN razas rz ON rz.id = r.raza_id
+ORDER BY r.created_at DESC
 LIMIT 20;
 
--- Usuarios registrados
-\c auth_db
-SELECT id, nombre, email, rol, email_verified, created_at
-FROM users
-ORDER BY created_at DESC;
-
--- Coincidencias encontradas
+-- Ver coincidencias calculadas
 \c coincidencias_db
-SELECT id, reporte_perdido_id, reporte_encontrado_id, score, estado
-FROM coincidencias
-ORDER BY created_at DESC;
+SELECT c.id, c.score_total, c.distancia_km, ce.nombre AS estado,
+       cs.score_color, cs.score_geo, cs.score_raza
+FROM coincidencias c
+JOIN coincidencia_estados ce ON ce.id = c.estado_id
+LEFT JOIN coincidencia_scores cs ON cs.coincidencia_id = c.id
+ORDER BY c.score_total DESC;
+
+-- Ver usuarios registrados
+\c auth_db
+SELECT u.id, u.nombre, u.email, r.name AS rol, u.created_at
+FROM users u JOIN roles r ON r.id = u.rol_id
+ORDER BY u.created_at DESC;
 ```
 
 ---
 
-## 13. Solución de problemas frecuentes
+## 15. Solución de problemas frecuentes
 
-### ❌ ExpiredTokenException — credenciales inválidas
+### ❌ Lambda devuelve 502 Bad Gateway
 
-**Síntoma:** Cualquier comando `aws` falla con `ExpiredTokenException`.
+**Causa:** La imagen Docker en ECR no tiene el Lambda Web Adapter, o el puerto `ENV PORT` no coincide con el servidor Spring Boot.
 
-**Causa:** Las credenciales de AWS Academy duran ~4 horas.
+**Solución:**
+1. Verifica que el Dockerfile tenga la línea:
+   ```dockerfile
+   COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
+   ENV PORT=808X   # X = puerto del microservicio
+   ```
+2. Reconstruye la imagen y vuelve a subir a ECR
+3. Actualiza la Lambda: `aws lambda update-function-code --function-name sanos-ms-mascotas --image-uri <ECR_URL>:latest`
 
-📁 **Directorio:** `sanos_y_salvos/`
+### ❌ Lambda timeout (Task timed out after X seconds)
 
-💻 **PowerShell local:**
+**Causa:** El microservicio Spring Boot tarda más que el timeout configurado (30s para BFF/auth, 60s para mascotas, 120s para geo/coincidencias).
 
+**Solución:**
+```hcl
+# En lambda.tf, aumentar timeout
+resource "aws_lambda_function" "mascotas" {
+  timeout = 120   # aumentar si es necesario
+  ...
+}
+```
+Luego `terraform apply`.
+
+### ❌ Error de conexión a RDS desde Lambda
+
+**Causa:** La Lambda y el RDS están en VPCs/subnets/SGs incompatibles.
+
+**Solución:**
+1. Verifica que la Lambda esté en las subnets privadas: `aws lambda get-function-configuration --function-name sanos-ms-mascotas`
+2. Verifica que el SG del RDS tenga regla de entrada desde el SG de Lambda (puerto 5432)
+3. En `security-groups.tf`, confirmar:
+   ```hcl
+   ingress {
+     from_port       = 5432
+     to_port         = 5432
+     protocol        = "tcp"
+     security_groups = [aws_security_group.lambda.id]
+   }
+   ```
+
+### ❌ SQS messages no se procesan (Lambda geo no se dispara)
+
+**Causa:** Falta el event source mapping entre SQS y Lambda, o la Lambda no tiene permisos.
+
+**Solución:**
 ```powershell
-cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-.\update-credentials.ps1    # pegar las nuevas credenciales del portal
-aws sts get-caller-identity  # verificar que funcionen
+# Ver event source mappings
+aws lambda list-event-source-mappings --function-name sanos-ms-geolocalizacion
+
+# Si no hay ninguno, re-aplicar Terraform
+terraform apply -target=aws_lambda_event_source_mapping.sqs_geo
 ```
 
----
+### ❌ ExpiredTokenException
 
-### ❌ database "auth_db" does not exist
+**Causa:** Credenciales de AWS Academy expiradas.
 
-**Síntoma:** Los logs de los microservicios muestran `FATAL: database "X" does not exist`.
-
-**Causa:** RDS no estaba listo cuando el EC2 intentó crear las BDs al arrancar.
-
-💻 **PowerShell local** — Crea las BDs y reinicia los contenedores:
-
+**Solución:**
 ```powershell
-cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-$Ec2Ip  = terraform output -raw ec2_public_ip
-$DbHost = terraform output -raw rds_endpoint
-
-ssh -i "sanos-y-salvos-key.pem" -o StrictHostKeyChecking=no "ec2-user@$Ec2Ip" "
-export PGPASSWORD='SanosYSalvos2026!'
-for db in auth_db mascotas_db geolocalizacion_db coincidencias_db; do
-    psql -h $DbHost -U sanosadmin -d postgres -c \"CREATE DATABASE \$db;\" 2>&1
-done
-echo 'Listo'
-"
-
-# Reiniciar microservicios para que se conecten a las BDs recién creadas
-ssh -i "sanos-y-salvos-key.pem" -o StrictHostKeyChecking=no "ec2-user@$Ec2Ip" `
-    "docker restart auth-service ms-mascotas ms-geolocalizacion ms-coincidencias"
+.\update-credentials.ps1
+aws sts get-caller-identity  # verificar
+terraform apply -auto-approve  # re-aplicar si es necesario
 ```
 
----
+### ❌ Error al compilar (mvn): ClassNotFoundException
 
-### ❌ Docker ECR login 400 Bad Request
+**Causa:** La versión de Java no es 21.
 
-**Síntoma:** El push de imágenes falla con `400 Bad Request` o `no basic auth credentials`.
-
-**Causa:** Docker Desktop intenta usar su `credsStore` que no soporta session tokens de AWS Academy.
-
-**Solución:** Repite el bloque completo del [Paso 7.1](#71-configurar-docker-para-ecr).
-
----
-
-### ❌ Maven BUILD FAILURE — cannot find symbol (Lombok)
-
-**Síntoma:** La compilación falla con errores como `cannot find symbol: method isActive()` o `variable log`.
-
-**Causa:** Lombok no es compatible con la versión de Java instalada (si tienes Java 22+).
-
-📁 **Directorio:** `Sanos-y-Salvos/`
-
-💻 **PowerShell local:**
-
+**Solución:**
 ```powershell
-cd "C:\proyectos\sanos-y-salvos\Sanos-y-Salvos"
-
-# El pom.xml ya usa Lombok 1.18.42 (soporta Java 21-25)
-# Fuerza la descarga de dependencias actualizadas:
-mvn clean package "-Dmaven.test.skip=true" -U --no-transfer-progress
+java -version  # debe mostrar 21.x
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.x.x.x-hotspot"
 ```
 
----
+### ❌ API Gateway devuelve CORS error en el navegador
 
-### ❌ Microservicio en estado DOWN
+**Causa:** El CORS está configurado en API Gateway pero el microservicio también está respondiendo headers CORS duplicados.
 
-**Síntoma:** Health check devuelve `{"status":"DOWN"}`.
+**Solución:**  
+En Spring Boot, verifica que `@CrossOrigin` no esté duplicando los headers con los que API Gateway ya agrega. Generalmente es mejor dejar solo el CORS de API Gateway y remover `@CrossOrigin` de los controllers.
 
-💻 **PowerShell local** — Ver el log del servicio con problema:
+### ❌ Imágenes no aparecen en la app (S3)
 
+**Causa:** Las fotos de mascotas se guardan en S3 con `PutObject`, pero el bucket no tiene acceso público.
+
+**Solución:**
 ```powershell
-cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-$Ec2Ip = terraform output -raw ec2_public_ip
-
-ssh -i "sanos-y-salvos-key.pem" -o StrictHostKeyChecking=no "ec2-user@$Ec2Ip" `
-    "docker logs auth-service 2>&1 | tail -30"
-```
-
-Causas frecuentes:
-
-| Componente DOWN | Solución |
-|---|---|
-| `db` | La base de datos no existe → ver problema anterior |
-| `mail` | Normal, no hay servidor de email → no afecta el funcionamiento |
-| `redis` | Verificar que ElastiCache existe: `terraform output` |
-| `rabbit` | Verificar que el contenedor rabbitmq esté corriendo: `docker ps` |
-
----
-
-### ❌ Estado de Terraform de otra cuenta
-
-**Síntoma:** Terraform intenta modificar recursos de la sesión anterior que ya no existen.
-
-📁 **Directorio:** `sanos_y_salvos/`
-
-💻 **PowerShell local:**
-
-```powershell
-cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-
-Rename-Item "terraform.tfstate" "terraform.tfstate.old"
-terraform apply -auto-approve
+$BUCKET = (terraform output -raw s3_bucket)
+aws s3api put-bucket-policy --bucket $BUCKET --policy '{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "PublicRead",
+    "Effect": "Allow",
+    "Principal": "*",
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::'"$BUCKET"'/*"
+  }]
+}'
 ```
 
 ---
 
-### ❌ El frontend muestra error de API / CORS
+## 16. Destruir la infraestructura
 
-**Síntoma:** La app carga pero al hacer login o registrarse da error de red.
-
-**Causa:** La URL de la API en `.env.production` apunta al ALB de la sesión anterior.
-
-📁 **Directorio:** `Sanos-y-Salvos/frontend/`
-
-💻 **PowerShell local:**
-
-```powershell
-cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
-$AlbDns = terraform output -raw alb_dns
-
-cd "..\Sanos-y-Salvos\frontend"
-Set-Content -Path ".env.production" -Value "VITE_API_BASE_URL=http://$AlbDns/api" -Encoding UTF8
-npm run build
-
-# Volver a sincronizar con S3
-$AccountId = (aws sts get-caller-identity --query Account --output text)
-aws s3 sync dist/ "s3://sanos-y-salvos-frontend-$AccountId" --delete --cache-control "no-cache" --exclude "assets/*"
-aws s3 sync dist/assets/ "s3://sanos-y-salvos-frontend-$AccountId/assets/" --cache-control "max-age=31536000" --delete
-```
-
----
-
-## 14. Destruir la infraestructura
-
-Cuando termines la presentación o quieras liberar recursos:
+Al finalizar la sesión de trabajo (no es necesario en Academy ya que se borra automáticamente, pero es buena práctica):
 
 📁 **Directorio:** `sanos_y_salvos/`
 
@@ -897,109 +885,86 @@ Cuando termines la presentación o quieras liberar recursos:
 ```powershell
 cd "C:\proyectos\sanos-y-salvos\sanos_y_salvos"
 
-# Vaciar el bucket S3 primero (S3 no se puede destruir si tiene archivos)
-$AccountId = (aws sts get-caller-identity --query Account --output text)
-aws s3 rm "s3://sanos-y-salvos-frontend-$AccountId" --recursive
+# Ver qué se va a destruir
+terraform plan -destroy
 
-# Destruir toda la infraestructura (~5-10 minutos)
+# Destruir todo
 terraform destroy -auto-approve
 ```
 
----
-
-## 15. Variables y credenciales de referencia
-
-### Base de datos RDS
-
-| Variable | Valor |
-|---|---|
-| Usuario | `sanosadmin` |
-| Contraseña | `SanosYSalvos2026!` |
-| Puerto | `5432` |
-| Motor | PostgreSQL 15 |
-| Bases de datos | `auth_db`, `mascotas_db`, `geolocalizacion_db`, `coincidencias_db` |
-
-### Redis (ElastiCache)
-
-| Variable | Valor |
-|---|---|
-| Contraseña | `SanosRedis2026!` |
-| Puerto | `6379` |
-
-### RabbitMQ
-
-| Variable | Valor |
-|---|---|
-| Usuario | `sanosrabbit` |
-| Contraseña | `SanosRabbit2026!` |
-| Puerto AMQP | `5672` |
-| Panel web | `http://<ec2_ip>:15672` |
-
-### Puertos de los microservicios en EC2
-
-| Servicio | Puerto |
-|---|---|
-| bff-service | `8080` |
-| auth-service | `8081` |
-| ms-mascotas | `8082` |
-| ms-geolocalizacion | `8083` |
-| ms-coincidencias | `8084` |
-
-### Región AWS
-
-```
-us-east-1
-```
+> **Nota Academy:** Al cerrar la sesión del Learner Lab, todos los recursos se destruyen automáticamente. Sin embargo, el **bucket S3** y el **RDS** a veces persisten — verifica en la consola AWS.
 
 ---
 
-## 16. Checklist rápido
+## 17. Variables y credenciales de referencia
 
-Usa esta lista cada vez que debas re-desplegar desde cero:
+### Variables de entorno de cada Lambda (inyectadas por Terraform)
 
-```
-PREPARACIÓN
-[ ] Abrir AWS Academy → Start Lab → esperar luz verde
-[ ] Copiar credenciales de AWS Details (3 líneas)
-[ ] PowerShell → cd sanos_y_salvos\
-[ ] .\update-credentials.ps1 → pegar credenciales
-[ ] Editar variables.tf → actualizar aws_account_id
-[ ] aws sts get-caller-identity → verificar cuenta
+| Variable | Microservicio | Descripción |
+|---|---|---|
+| `DB_HOST` | Todos | Host de RDS PostgreSQL |
+| `DB_USER` | Todos | Usuario DB (sanosadmin) |
+| `DB_PASS` | Todos | Password DB |
+| `REDIS_HOST` | BFF, auth | Host ElastiCache Redis |
+| `JWT_SECRET` | auth, bff | Clave para firmar tokens JWT |
+| `SQS_REPORTES_NUEVOS_URL` | mascotas | URL cola SQS |
+| `SQS_GEO_COMPLETADOS_URL` | geo, mascotas | URL cola SQS |
+| `SQS_NOTIFICACIONES_URL` | coincidencias | URL cola SQS |
+| `MINIO_ENDPOINT` | mascotas | `https://s3.amazonaws.com` |
+| `MINIO_BUCKET` | mascotas | Nombre del bucket S3 |
+| `AUTH_SERVICE_URL` | bff | URL interna vía API Gateway |
+| `MASCOTAS_SERVICE_URL` | bff | URL interna vía API Gateway |
+| `GEO_SERVICE_URL` | bff | URL interna vía API Gateway |
+| `COINCIDENCIAS_SERVICE_URL` | bff | URL interna vía API Gateway |
 
-INFRAESTRUCTURA
-[ ] aws ec2 create-key-pair... → guardar .pem
-[ ] Renombrar terraform.tfstate anterior si existe
-[ ] terraform init -upgrade
-[ ] terraform apply -auto-approve  (~10-15 min)
-[ ] terraform output → anotar ec2_public_ip y alb_dns
+### Puertos de los microservicios
 
-COMPILAR Y DOCKERIZAR
-[ ] Docker Desktop abierto y corriendo
-[ ] cd Sanos-y-Salvos\
-[ ] mvn clean package "-Dmaven.test.skip=true"
-[ ] Ejecutar bloque PowerShell de configuración ECR (Paso 7.1)
-[ ] Build y push de las 5 imágenes Docker
+| Microservicio | Puerto | Lambda function name |
+|---|---|---|
+| bff-service | 8080 | `sanos-bff-service` |
+| auth-service | 8081 | `sanos-auth-service` |
+| ms-mascotas | 8082 | `sanos-ms-mascotas` |
+| ms-geolocalizacion | 8083 | `sanos-ms-geolocalizacion` |
+| ms-coincidencias | 8084 | `sanos-ms-coincidencias` |
 
-BACKEND
-[ ] SSH al EC2 → crear 4 bases de datos en RDS
-[ ] Ejecutar start-services.sh en el EC2
-[ ] Esperar ~3 minutos
-[ ] Verificar: docker ps → 6 contenedores UP
-[ ] Verificar: health de los 5 servicios → UP
+### Outputs de Terraform más útiles
 
-FRONTEND
-[ ] Actualizar .env.production con nuevo ALB DNS
-[ ] cd Sanos-y-Salvos\frontend\
-[ ] npm run build
-[ ] Crear bucket S3 y sincronizar dist/
-
-VERIFICACIÓN
-[ ] .\smoke-test.ps1 → todos los checks pasan
-[ ] Abrir frontend en el navegador → funciona
-[ ] Registrar usuario de prueba → responde OK
+```powershell
+terraform output api_gateway_url          # URL pública del API Gateway
+terraform output rds_host                 # Host del RDS
+terraform output redis_host               # Host del Redis
+terraform output s3_bucket                # Nombre del bucket
+terraform output ecr_login_command        # Comando login ECR
+terraform output docker_push_commands     # Comandos push ECR
+terraform output lambda_functions         # ARNs de las Lambdas
+terraform output sqs_reportes_nuevos_url  # URL cola SQS
+terraform output resumen_nueva_arquitectura
 ```
 
 ---
 
-*Guía generada para el proyecto Sanos y Salvos — AWS Academy deployment.*  
-*Repositorio de código: `Sanos-y-Salvos` | Repositorio de infraestructura: `sanos_y_salvos`*
+## 18. Checklist rápido
+
+Usa este checklist para verificar que el despliegue está completo:
+
+```
+□ Credenciales AWS Academy actualizadas en credentials.tf
+□ terraform apply exitoso (sin errores)
+□ terraform output muestra api_gateway_url y rds_host
+□ Login a ECR exitoso
+□ Imágenes Docker construidas para los 5 microservicios
+□ Imágenes subidas a ECR (5 repositorios)
+□ Lambdas actualizadas con las nuevas imágenes
+□ init-databases.sql ejecutado exitosamente
+□ GET /api/mascotas/especies devuelve lista de especies
+□ POST /api/auth/register crea usuario
+□ POST /api/auth/login devuelve JWT token
+□ POST /api/mascotas/reportes crea reporte con especieId/razaId
+□ CloudWatch Logs de ms-geolocalizacion muestra procesamiento SQS
+□ CloudWatch Logs de ms-coincidencias muestra coincidencias calculadas
+□ Frontend accesible desde URL S3
+```
+
+---
+
+*Guía actualizada para la arquitectura Lambda + SQS + API Gateway — Mayo 2025.*

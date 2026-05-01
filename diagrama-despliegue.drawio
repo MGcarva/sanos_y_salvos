@@ -1,0 +1,297 @@
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- ===== TÍTULO ===== -->
+    <mxCell id="title" value="Sanos y Salvos — Diagrama de Despliegue AWS" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#1a1a2e;" vertex="1" parent="1">
+      <mxGeometry x="300" y="20" width="1050" height="40" as="geometry" />
+    </mxCell>
+
+    <!-- ===== USUARIO / INTERNET ===== -->
+    <mxCell id="user" value="👤 Usuario / Navegador" style="shape=mxgraph.aws4.user;fillColor=#232F3E;strokeColor=none;fontColor=#ffffff;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="40" y="200" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- ===== API GATEWAY ===== -->
+    <mxCell id="apigw" value="AWS API Gateway&#xa;HTTP API&#xa;&#xa;ANY /api/auth/*&#xa;ANY /api/mascotas/*&#xa;ANY /api/geo/*&#xa;ANY /api/coincidencias/*&#xa;ANY /api/* (fallback)" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;fillColor=#E7157B;strokeColor=none;fontColor=#ffffff;fontStyle=1;fontSize=10;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;spacingTop=-5;" vertex="1" parent="1">
+      <mxGeometry x="200" y="200" width="120" height="120" as="geometry" />
+    </mxCell>
+
+    <!-- Arrow: User -> API GW -->
+    <mxCell id="e_user_apigw" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#E7157B;fontColor=#E7157B;fontStyle=1;" edge="1" parent="1" source="user" target="apigw">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== VPC OUTER BOX ===== -->
+    <mxCell id="vpc" value="VPC — 10.0.0.0/16 (us-east-1)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#8C4FFF;fillColor=#F5F0FF;verticalAlign=top;align=center;spacingTop=25;fontSize=13;fontStyle=1;fontColor=#8C4FFF;" vertex="1" parent="1">
+      <mxGeometry x="380" y="80" width="1060" height="880" as="geometry" />
+    </mxCell>
+
+    <!-- ===== AZ-A BOX ===== -->
+    <mxCell id="az_a" value="us-east-1a (primaria)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_availability_zone;strokeColor=#147EBA;fillColor=#E6F2F8;verticalAlign=top;align=center;spacingTop=25;fontSize=11;fontStyle=1;fontColor=#147EBA;" vertex="1" parent="1">
+      <mxGeometry x="400" y="110" width="580" height="820" as="geometry" />
+    </mxCell>
+
+    <!-- ===== AZ-B BOX ===== -->
+    <mxCell id="az_b" value="us-east-1b (respaldo automático)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_availability_zone;strokeColor=#147EBA;fillColor=#E6F2F8;verticalAlign=top;align=center;spacingTop=25;fontSize=11;fontStyle=1;fontColor=#147EBA;" vertex="1" parent="1">
+      <mxGeometry x="1010" y="110" width="400" height="820" as="geometry" />
+    </mxCell>
+
+    <!-- ===== PRIVATE SUBNET AZ-A ===== -->
+    <mxCell id="subnet_priv_a" value="Subnet privada (10.0.1.0/24)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_private_subnet;strokeColor=#147EBA;fillColor=#dae8fc;verticalAlign=top;align=left;spacingTop=25;spacingLeft=5;fontSize=10;fontColor=#147EBA;" vertex="1" parent="1">
+      <mxGeometry x="420" y="145" width="540" height="640" as="geometry" />
+    </mxCell>
+
+    <!-- ===== LAMBDA FUNCTIONS (AZ-A) ===== -->
+
+    <!-- bff-service -->
+    <mxCell id="lambda_bff" value="λ bff-service&#xa;:8080 | 512MB | 30s&#xa;Spring Boot + Web Adapter" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#ED7100;strokeColor=none;fontColor=#333333;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;spacingTop=-2;" vertex="1" parent="1">
+      <mxGeometry x="450" y="200" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- auth-service -->
+    <mxCell id="lambda_auth" value="λ auth-service&#xa;:8081 | 512MB | 30s&#xa;JWT + Roles" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#ED7100;strokeColor=none;fontColor=#333333;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;spacingTop=-2;" vertex="1" parent="1">
+      <mxGeometry x="570" y="200" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- ms-mascotas -->
+    <mxCell id="lambda_mascotas" value="λ ms-mascotas&#xa;:8082 | 512MB | 60s&#xa;Reportes + Especies/Razas" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#ED7100;strokeColor=none;fontColor=#333333;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;spacingTop=-2;" vertex="1" parent="1">
+      <mxGeometry x="690" y="200" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- ms-geolocalizacion -->
+    <mxCell id="lambda_geo" value="λ ms-geolocalizacion&#xa;:8083 | 512MB | 120s&#xa;PostGIS + Clustering" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#ED7100;strokeColor=none;fontColor=#333333;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;spacingTop=-2;" vertex="1" parent="1">
+      <mxGeometry x="450" y="370" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- ms-coincidencias -->
+    <mxCell id="lambda_coinc" value="λ ms-coincidencias&#xa;:8084 | 512MB | 120s&#xa;Scoring + pg_trgm" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;fillColor=#ED7100;strokeColor=none;fontColor=#333333;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;spacingTop=-2;" vertex="1" parent="1">
+      <mxGeometry x="570" y="370" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- ===== SQS QUEUES ===== -->
+    <mxCell id="sqs_group" value="Amazon SQS" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_messaging;strokeColor=#E7157B;fillColor=#FDEEF6;verticalAlign=top;spacingTop=25;fontSize=11;fontStyle=1;fontColor=#E7157B;" vertex="1" parent="1">
+      <mxGeometry x="430" y="530" width="600" height="180" as="geometry" />
+    </mxCell>
+
+    <!-- SQS: reportes-nuevos -->
+    <mxCell id="sqs_reportes" value="SQS: reportes-nuevos&#xa;(Long polling 20s)&#xa;DLQ: reportes-nuevos-dlq" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;fillColor=#E7157B;strokeColor=none;fontColor=#333333;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;" vertex="1" parent="1">
+      <mxGeometry x="460" y="570" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- SQS: geo-completados -->
+    <mxCell id="sqs_geo" value="SQS: geo-completados&#xa;(Long polling 20s)&#xa;DLQ: geo-completados-dlq" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;fillColor=#E7157B;strokeColor=none;fontColor=#333333;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;" vertex="1" parent="1">
+      <mxGeometry x="590" y="570" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- SQS: notificaciones -->
+    <mxCell id="sqs_notif" value="SQS: notificaciones" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;fillColor=#E7157B;strokeColor=none;fontColor=#333333;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;" vertex="1" parent="1">
+      <mxGeometry x="720" y="570" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- ===== RDS (AZ-A primary + AZ-B standby) ===== -->
+    <!-- RDS primary AZ-A -->
+    <mxCell id="rds_primary" value="RDS PostgreSQL 15&#xa;(Primaria — us-east-1a)&#xa;&#xa;• auth_db&#xa;• mascotas_db&#xa;• geolocalizacion_db&#xa;• coincidencias_db" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#2E73B8;strokeColor=none;fontColor=#ffffff;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;" vertex="1" parent="1">
+      <mxGeometry x="460" y="760" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- RDS standby AZ-B -->
+    <mxCell id="rds_standby" value="RDS PostgreSQL 15&#xa;(Standby — us-east-1b)&#xa;Failover auto ~60s" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.rds;fillColor=#5D8AA8;strokeColor=none;fontColor=#ffffff;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;" vertex="1" parent="1">
+      <mxGeometry x="1060" y="760" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- RDS sync arrow -->
+    <mxCell id="e_rds_sync" value="Replicación&#xa;sincrona" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;strokeColor=#2E73B8;dashed=1;fontColor=#2E73B8;fontStyle=2;fontSize=9;" edge="1" parent="1" source="rds_primary" target="rds_standby">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ELASTICACHE REDIS ===== -->
+    <mxCell id="redis" value="ElastiCache Redis 7&#xa;Sesiones JWT + Caché" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticache;fillColor=#C7131F;strokeColor=none;fontColor=#ffffff;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;" vertex="1" parent="1">
+      <mxGeometry x="600" y="760" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- Redis replica AZ-B -->
+    <mxCell id="redis_replica" value="ElastiCache Redis&#xa;(Réplica — us-east-1b)" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.elasticache;fillColor=#E55C60;strokeColor=none;fontColor=#ffffff;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;" vertex="1" parent="1">
+      <mxGeometry x="1180" y="760" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- Redis sync -->
+    <mxCell id="e_redis_sync" value="Replicación" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;strokeColor=#C7131F;dashed=1;fontColor=#C7131F;fontStyle=2;fontSize=9;" edge="1" parent="1" source="redis" target="redis_replica">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== S3 ===== -->
+    <mxCell id="s3" value="S3&#xa;Fotos mascotas&#xa;+ Frontend React" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#3F8624;strokeColor=none;fontColor=#ffffff;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;" vertex="1" parent="1">
+      <mxGeometry x="870" y="400" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ECR ===== -->
+    <mxCell id="ecr" value="Amazon ECR&#xa;5 repositorios Docker&#xa;(Lambda Web Adapter&#xa;incluido en cada imagen)" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecr;fillColor=#ED7100;strokeColor=none;fontColor=#ffffff;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;" vertex="1" parent="1">
+      <mxGeometry x="870" y="200" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- ===== CLOUDWATCH ===== -->
+    <mxCell id="cloudwatch" value="CloudWatch Logs&#xa;/aws/lambda/sanos-*" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;fillColor=#E7157B;strokeColor=none;fontColor=#ffffff;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;" vertex="1" parent="1">
+      <mxGeometry x="870" y="300" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- ===== SECURITY GROUP LABEL ===== -->
+    <mxCell id="sg_label" value="Security Group: lambda-sg&#xa;(egress: 0.0.0.0/0)" style="text;html=1;strokeColor=#999999;fillColor=#f5f5f5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=9;fontColor=#666666;" vertex="1" parent="1">
+      <mxGeometry x="430" y="147" width="200" height="30" as="geometry" />
+    </mxCell>
+
+    <!-- ===== IAM LABROLE ===== -->
+    <mxCell id="labrole" value="IAM: LabRole&#xa;(execution + task role&#xa;para todas las Lambdas)" style="shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.role;fillColor=#DD344C;strokeColor=none;fontColor=#ffffff;fontStyle=1;fontSize=9;align=center;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;" vertex="1" parent="1">
+      <mxGeometry x="870" y="500" width="80" height="80" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ARROWS: API Gateway → Lambdas ===== -->
+    <mxCell id="e_apigw_bff" value="ANY /api/*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#ED7100;fontColor=#ED7100;fontSize=8;fontStyle=1;" edge="1" parent="1" source="apigw" target="lambda_bff">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_apigw_auth" value="ANY /api/auth/*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.4;entryX=0;entryY=0.5;strokeColor=#ED7100;fontColor=#ED7100;fontSize=8;fontStyle=1;" edge="1" parent="1" source="apigw" target="lambda_auth">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_apigw_mascotas" value="ANY /api/mascotas/*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.3;entryX=0;entryY=0.5;strokeColor=#ED7100;fontColor=#ED7100;fontSize=8;fontStyle=1;" edge="1" parent="1" source="apigw" target="lambda_mascotas">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_apigw_geo" value="ANY /api/geo/*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.6;entryX=0;entryY=0.5;strokeColor=#ED7100;fontColor=#ED7100;fontSize=8;fontStyle=1;" edge="1" parent="1" source="apigw" target="lambda_geo">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_apigw_coinc" value="ANY /api/coincidencias/*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.7;entryX=0;entryY=0.5;strokeColor=#ED7100;fontColor=#ED7100;fontSize=8;fontStyle=1;" edge="1" parent="1" source="apigw" target="lambda_coinc">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ARROWS: SQS Async flow ===== -->
+    <!-- mascotas → SQS reportes-nuevos -->
+    <mxCell id="e_mas_sqs1" value="publica&#xa;ReporteNuevoEvent" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#E7157B;fontColor=#E7157B;fontSize=8;fontStyle=1;" edge="1" parent="1" source="lambda_mascotas" target="sqs_reportes">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <!-- SQS reportes-nuevos → geo (trigger) -->
+    <mxCell id="e_sqs1_geo" value="trigger Lambda" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0.5;exitY=0;entryX=0.5;entryY=1;strokeColor=#E7157B;fontColor=#E7157B;fontSize=8;fontStyle=1;" edge="1" parent="1" source="sqs_reportes" target="lambda_geo">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <!-- geo → SQS geo-completados -->
+    <mxCell id="e_geo_sqs2" value="publica&#xa;GeoCompletadoEvent" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#E7157B;fontColor=#E7157B;fontSize=8;fontStyle=1;" edge="1" parent="1" source="lambda_geo" target="sqs_geo">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <!-- SQS geo-completados → coincidencias (trigger) -->
+    <mxCell id="e_sqs2_coinc" value="trigger Lambda" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0.5;exitY=0;entryX=0.5;entryY=1;strokeColor=#E7157B;fontColor=#E7157B;fontSize=8;fontStyle=1;" edge="1" parent="1" source="sqs_geo" target="lambda_coinc">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <!-- coincidencias → SQS notificaciones -->
+    <mxCell id="e_coinc_sqs3" value="notificación" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#E7157B;fontColor=#E7157B;fontSize=8;fontStyle=1;" edge="1" parent="1" source="lambda_coinc" target="sqs_notif">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ARROWS: Lambdas → RDS ===== -->
+    <mxCell id="e_lambdas_rds" value="PostgreSQL :5432" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#2E73B8;fontColor=#2E73B8;fontSize=8;fontStyle=1;" edge="1" parent="1" source="lambda_auth" target="rds_primary">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_mascotas_rds" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0.5;exitY=1;entryX=0.3;entryY=0;strokeColor=#2E73B8;" edge="1" parent="1" source="lambda_mascotas" target="rds_primary">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_geo_rds" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0;exitY=0.5;entryX=0.1;entryY=0;strokeColor=#2E73B8;" edge="1" parent="1" source="lambda_geo" target="rds_primary">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_coinc_rds" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0;exitY=0.5;entryX=0.2;entryY=0;strokeColor=#2E73B8;" edge="1" parent="1" source="lambda_coinc" target="rds_primary">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ARROWS: Lambdas → Redis ===== -->
+    <mxCell id="e_bff_redis" value="Redis :6379" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0.5;exitY=1;entryX=0;entryY=0.3;strokeColor=#C7131F;fontColor=#C7131F;fontSize=8;fontStyle=1;" edge="1" parent="1" source="lambda_bff" target="redis">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_auth_redis" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0.5;exitY=1;entryX=0;entryY=0.5;strokeColor=#C7131F;" edge="1" parent="1" source="lambda_auth" target="redis">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ARROWS: mascotas → S3 ===== -->
+    <mxCell id="e_mascotas_s3" value="PutObject&#xa;(fotos)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#3F8624;fontColor=#3F8624;fontSize=8;fontStyle=1;" edge="1" parent="1" source="lambda_mascotas" target="s3">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ARROWS: ECR → Lambdas ===== -->
+    <mxCell id="e_ecr_lambdas" value="image_uri&#xa;(package_type=Image)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=0;exitY=0.5;entryX=1;entryY=0.5;strokeColor=#ED7100;fontColor=#ED7100;fontSize=8;fontStyle=1;dashed=1;" edge="1" parent="1" source="ecr" target="lambda_mascotas">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== ARROWS: Lambdas → CloudWatch ===== -->
+    <mxCell id="e_lambdas_cw" value="logs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#E7157B;fontColor=#E7157B;fontSize=8;fontStyle=1;dashed=1;" edge="1" parent="1" source="lambda_geo" target="cloudwatch">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ===== LEYENDA ===== -->
+    <mxCell id="legend_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+      <mxGeometry x="40" y="480" width="280" height="260" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_title" value="Leyenda" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="50" y="490" width="100" height="20" as="geometry" />
+    </mxCell>
+
+    <mxCell id="leg1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ED7100;strokeColor=none;width=20;height=20;" vertex="1" parent="1">
+      <mxGeometry x="50" y="520" width="20" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="leg1t" value="AWS Lambda (Spring Boot + Web Adapter)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="80" y="520" width="230" height="20" as="geometry" />
+    </mxCell>
+
+    <mxCell id="leg2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E7157B;strokeColor=none;" vertex="1" parent="1">
+      <mxGeometry x="50" y="550" width="20" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="leg2t" value="Amazon SQS (reemplaza RabbitMQ)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="80" y="550" width="230" height="20" as="geometry" />
+    </mxCell>
+
+    <mxCell id="leg3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#2E73B8;strokeColor=none;" vertex="1" parent="1">
+      <mxGeometry x="50" y="580" width="20" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="leg3t" value="RDS PostgreSQL 15 (Multi-AZ)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="80" y="580" width="230" height="20" as="geometry" />
+    </mxCell>
+
+    <mxCell id="leg4" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#C7131F;strokeColor=none;" vertex="1" parent="1">
+      <mxGeometry x="50" y="610" width="20" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="leg4t" value="ElastiCache Redis 7" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="80" y="610" width="230" height="20" as="geometry" />
+    </mxCell>
+
+    <mxCell id="leg5" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#3F8624;strokeColor=none;" vertex="1" parent="1">
+      <mxGeometry x="50" y="640" width="20" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="leg5t" value="Amazon S3 (fotos + frontend)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="80" y="640" width="230" height="20" as="geometry" />
+    </mxCell>
+
+    <mxCell id="leg6" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#8C4FFF;strokeColor=none;" vertex="1" parent="1">
+      <mxGeometry x="50" y="670" width="20" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="leg6t" value="VPC — 2 Availability Zones (HA)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="80" y="670" width="230" height="20" as="geometry" />
+    </mxCell>
+
+    <mxCell id="leg7_line" value="" style="endArrow=block;endFill=1;edgeStyle=orthogonalEdgeStyle;strokeColor=#999999;dashed=1;" edge="1" parent="1">
+      <mxGeometry x="50" y="710" width="20" height="20" as="geometry">
+        <Array as="points" />
+        <mxPoint x="50" y="710" as="sourcePoint" />
+        <mxPoint x="70" y="710" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="leg7t" value="Replicación / Referencia" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="80" y="700" width="230" height="20" as="geometry" />
+    </mxCell>
+
+    <!-- ===== NOTE: Lambda Web Adapter ===== -->
+    <mxCell id="note_adapter" value="📌 Lambda Web Adapter&#xa;Cada imagen Docker incluye:&#xa;COPY --from=public.ecr.aws/awsguru/&#xa;aws-lambda-adapter:0.8.4&#xa;/lambda-adapter /opt/extensions/lambda-adapter&#xa;&#xa;→ Spring Boot sin cambios de código" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#333333;fontSize=9;align=left;" vertex="1" parent="1">
+      <mxGeometry x="40" y="310" width="280" height="140" as="geometry" />
+    </mxCell>
+
+    <!-- ===== NOTE: AWS Academy ===== -->
+    <mxCell id="note_academy" value="✅ Compatible con AWS Academy&#xa;• Usa LabRole existente&#xa;• Sin iam:CreateRole&#xa;• Sin EKS&#xa;• SQS reemplaza RabbitMQ" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#333333;fontSize=9;align=left;" vertex="1" parent="1">
+      <mxGeometry x="40" y="140" width="180" height="120" as="geometry" />
+    </mxCell>
+
+  </root>
+</mxGraphModel>
