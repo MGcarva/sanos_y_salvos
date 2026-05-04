@@ -1,0 +1,180 @@
+name: CI/CD - Sanos y Salvos
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+
+jobs:
+  # ==========================================
+  # STAGE 1: Test Backend Services
+  # ==========================================
+  test-backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth-service, ms-mascotas, ms-geolocalizacion, ms-coincidencias, bff-service]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run tests - ${{ matrix.service }}
+        run: mvn test -pl ${{ matrix.service }} -am -DskipITs
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.service }}
+          path: ${{ matrix.service }}/target/surefire-reports/
+
+  # ==========================================
+  # STAGE 2: Test Frontend
+  # ==========================================
+  test-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+  # ==========================================
+  # STAGE 3: Build & Push Docker Images
+  # ==========================================
+  build-and-push:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    strategy:
+      matrix:
+        service:
+          - name: auth-service
+            dockerfile: auth-service/Dockerfile
+          - name: ms-mascotas
+            dockerfile: ms-mascotas/Dockerfile
+          - name: ms-geolocalizacion
+            dockerfile: ms-geolocalizacion/Dockerfile
+          - name: ms-coincidencias
+            dockerfile: ms-coincidencias/Dockerfile
+          - name: bff-service
+            dockerfile: bff-service/Dockerfile
+          - name: frontend
+            dockerfile: frontend/Dockerfile
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          REPO_NAME=sanos-y-salvos/${{ matrix.service.name }}
+
+          # Create ECR repo if not exists
+          aws ecr describe-repositories --repository-names $REPO_NAME 2>/dev/null || \
+            aws ecr create-repository --repository-name $REPO_NAME --image-scanning-configuration scanOnPush=true
+
+          # Build context depends on service
+          if [ "${{ matrix.service.name }}" = "frontend" ]; then
+            docker build -t ${{ env.ECR_REGISTRY }}/$REPO_NAME:$IMAGE_TAG \
+                         -t ${{ env.ECR_REGISTRY }}/$REPO_NAME:latest \
+                         -f ${{ matrix.service.dockerfile }} frontend/
+          else
+            docker build -t ${{ env.ECR_REGISTRY }}/$REPO_NAME:$IMAGE_TAG \
+                         -t ${{ env.ECR_REGISTRY }}/$REPO_NAME:latest \
+                         -f ${{ matrix.service.dockerfile }} .
+          fi
+
+          docker push ${{ env.ECR_REGISTRY }}/$REPO_NAME:$IMAGE_TAG
+          docker push ${{ env.ECR_REGISTRY }}/$REPO_NAME:latest
+
+  # ==========================================
+  # STAGE 4: Deploy to AWS EC2
+  # ==========================================
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ec2-user/sanos-y-salvos
+
+            # Login to ECR
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
+              docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+
+            # Pull latest images
+            docker compose -f docker-compose.prod.yml pull
+
+            # Deploy with zero-downtime
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            # Cleanup old images
+            docker image prune -af --filter "until=24h"
+
+            # Health check
+            sleep 30
+            curl -sf http://localhost:3000 > /dev/null && echo "Frontend OK" || echo "Frontend FAILED"
+            curl -sf http://localhost:9090/actuator/health > /dev/null && echo "BFF OK" || echo "BFF FAILED"

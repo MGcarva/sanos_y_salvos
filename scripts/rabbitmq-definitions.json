@@ -1,0 +1,102 @@
+{
+  "rabbit_version": "3.12",
+  "vhosts": [
+    { "name": "/" }
+  ],
+  "exchanges": [
+    {
+      "name": "sanos-salvos",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "geo.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "sanos-salvos",
+        "x-dead-letter-routing-key": "geo.dlq"
+      }
+    },
+    {
+      "name": "geo.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "coincidencias.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "sanos-salvos",
+        "x-dead-letter-routing-key": "coincidencias.dlq"
+      }
+    },
+    {
+      "name": "coincidencias.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "notification.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "sanos-salvos",
+      "vhost": "/",
+      "destination": "geo.queue",
+      "destination_type": "queue",
+      "routing_key": "reporte.nuevo.geo",
+      "arguments": {}
+    },
+    {
+      "source": "sanos-salvos",
+      "vhost": "/",
+      "destination": "coincidencias.queue",
+      "destination_type": "queue",
+      "routing_key": "reporte.geo.completado",
+      "arguments": {}
+    },
+    {
+      "source": "sanos-salvos",
+      "vhost": "/",
+      "destination": "notification.queue",
+      "destination_type": "queue",
+      "routing_key": "notification.#",
+      "arguments": {}
+    },
+    {
+      "source": "sanos-salvos",
+      "vhost": "/",
+      "destination": "geo.dlq",
+      "destination_type": "queue",
+      "routing_key": "geo.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "sanos-salvos",
+      "vhost": "/",
+      "destination": "coincidencias.dlq",
+      "destination_type": "queue",
+      "routing_key": "coincidencias.dlq",
+      "arguments": {}
+    }
+  ]
+}

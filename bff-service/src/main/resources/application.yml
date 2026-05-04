@@ -1,0 +1,64 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: bff-service
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      password: ${REDIS_PASS:}
+
+jwt:
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+
+services:
+  auth-url: http://${AUTH_HOST:localhost}:8081
+  mascotas-url: http://${MASCOTAS_HOST:localhost}:8082
+  geo-url: http://${GEO_HOST:localhost}:8083
+  coincidencias-url: http://${COINCIDENCIAS_HOST:localhost}:8084
+
+cache:
+  dashboard:
+    ttl: 300
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      auth-service:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      ms-mascotas:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      ms-geolocalizacion:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+  timelimiter:
+    instances:
+      default:
+        timeout-duration: 5s
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.sanosysalvos: DEBUG
+
+management:
+  endpoints:
+    web:
+      base-path: /api/actuator
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

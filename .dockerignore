@@ -1,0 +1,10 @@
+**/target/
+**/node_modules/
+**/.git
+**/.idea
+**/.vscode
+**/*.iml
+**/.env.local
+**/dist/
+**/*.drawio
+**/*.bpmn
