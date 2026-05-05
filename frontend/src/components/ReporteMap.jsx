@@ -22,7 +22,7 @@ const encontradoIcon = new L.Icon({
     iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
 });
 
-export default function ReporteMap({ reportes = [], center = [4.711, -74.0721], zoom = 12, height = '500px', clickable = false }) {
+export default function ReporteMap({ reportes = [], center = [-33.6883, -71.2133], zoom = 12, height = '500px', clickable = false }) {
     return (
         <MapContainer center={center} zoom={zoom} style={{ height, width: '100%' }}>
             <TileLayer

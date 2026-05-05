@@ -26,37 +26,66 @@ export default function Home() {
                 <div className="container position-relative" style={{ zIndex: 1 }}>
                     <div className="row align-items-center">
                         <div className="col-lg-7">
-                            <h1 className="hero-title mb-3">
-                                Reunimos mascotas<br />con sus familias
-                            </h1>
-                            <p className="hero-subtitle mb-4">
-                                Reporta mascotas perdidas o encontradas, y nuestro sistema inteligente
-                                de geolocalización y coincidencias te ayudará a encontrarlas.
-                            </p>
-                            <div className="d-flex gap-3 flex-wrap">
-                                {user ? (
-                                    <>
+                            {user?.rol === 'REFUGIO' ? (
+                                <>
+                                    <div className="mb-2">
+                                        <span className="badge bg-light text-success fw-semibold px-3 py-2" style={{ fontSize: '0.85rem' }}>
+                                            <i className="bi bi-house-heart-fill me-1"></i> Panel de Refugio
+                                        </span>
+                                    </div>
+                                    <h1 className="hero-title mb-3">
+                                        Bienvenido, {user.nombre}<br />gestiona tus animales
+                                    </h1>
+                                    <p className="hero-subtitle mb-4">
+                                        Registra animales encontrados en tu refugio y nuestro sistema
+                                        buscará automáticamente a sus familias.
+                                    </p>
+                                    <div className="d-flex gap-3 flex-wrap">
                                         <Link to="/reportar" className="btn btn-light btn-lg fw-bold px-4">
-                                            <i className="bi bi-plus-circle me-2"></i>Crear Reporte
+                                            <i className="bi bi-plus-circle me-2"></i>Registrar Animal
                                         </Link>
-                                        <Link to="/mapa" className="btn btn-outline-light btn-lg px-4">
-                                            <i className="bi bi-map me-2"></i>Ver Mapa
+                                        <Link to="/mis-reportes" className="btn btn-outline-light btn-lg px-4">
+                                            <i className="bi bi-list-check me-2"></i>Mis Animales
                                         </Link>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Link to="/register" className="btn btn-light btn-lg fw-bold px-4">
-                                            <i className="bi bi-person-plus me-2"></i>Crear Cuenta
-                                        </Link>
-                                        <Link to="/mapa" className="btn btn-outline-light btn-lg px-4">
-                                            <i className="bi bi-map me-2"></i>Explorar Mapa
-                                        </Link>
-                                    </>
-                                )}
-                            </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <h1 className="hero-title mb-3">
+                                        Reunimos mascotas<br />con sus familias
+                                    </h1>
+                                    <p className="hero-subtitle mb-4">
+                                        Reporta mascotas perdidas o encontradas, y nuestro sistema inteligente
+                                        de geolocalización y coincidencias te ayudará a encontrarlas.
+                                    </p>
+                                    <div className="d-flex gap-3 flex-wrap">
+                                        {user ? (
+                                            <>
+                                                <Link to="/reportar" className="btn btn-light btn-lg fw-bold px-4">
+                                                    <i className="bi bi-plus-circle me-2"></i>Crear Reporte
+                                                </Link>
+                                                <Link to="/mapa" className="btn btn-outline-light btn-lg px-4">
+                                                    <i className="bi bi-map me-2"></i>Ver Mapa
+                                                </Link>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Link to="/register" className="btn btn-light btn-lg fw-bold px-4">
+                                                    <i className="bi bi-person-plus me-2"></i>Crear Cuenta
+                                                </Link>
+                                                <Link to="/mapa" className="btn btn-outline-light btn-lg px-4">
+                                                    <i className="bi bi-map me-2"></i>Explorar Mapa
+                                                </Link>
+                                            </>
+                                        )}
+                                    </div>
+                                </>
+                            )}
                         </div>
                         <div className="col-lg-5 text-center d-none d-lg-block">
-                            <div style={{ fontSize: '10rem', lineHeight: 1, opacity: 0.3 }}>🐾</div>
+                            <div style={{ fontSize: '10rem', lineHeight: 1, opacity: 0.3 }}>
+                                {user?.rol === 'REFUGIO' ? '🏠' : '🐾'}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -107,7 +136,7 @@ export default function Home() {
                                 <div className="spinner-border" role="status"></div>
                             </div>
                         ) : (
-                            <ReporteMap reportes={data.heatmap.length > 0 ? data.heatmap : data.reportes} />
+                            <ReporteMap reportes={data.heatmap.length > 0 ? data.heatmap : data.reportes} height="280px" />
                         )}
                     </div>
                 </div>
@@ -195,8 +224,8 @@ export default function Home() {
                                      style={{ width: '70px', height: '70px' }}>
                                     <i className="bi bi-megaphone text-danger" style={{ fontSize: '1.8rem' }}></i>
                                 </div>
-                                <h6 className="fw-bold">2. Reporta</h6>
-                                <p className="text-muted small">Publica un reporte con foto y ubicación</p>
+                                <h6 className="fw-bold">{user?.rol === 'REFUGIO' ? '2. Registra' : '2. Reporta'}</h6>
+                                <p className="text-muted small">{user?.rol === 'REFUGIO' ? 'Registra animales encontrados con foto y ubicación' : 'Publica un reporte con foto y ubicación'}</p>
                             </div>
                             <div className="col-md-3">
                                 <div className="rounded-circle bg-warning bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3"
@@ -212,7 +241,7 @@ export default function Home() {
                                     <i className="bi bi-heart text-success" style={{ fontSize: '1.8rem' }}></i>
                                 </div>
                                 <h6 className="fw-bold">4. Reencuentro</h6>
-                                <p className="text-muted small">Recibe notificaciones cuando haya coincidencias</p>
+                                <p className="text-muted small">{user?.rol === 'REFUGIO' ? 'El sistema notifica a las familias cuando hay una coincidencia' : 'Recibe notificaciones cuando haya coincidencias'}</p>
                             </div>
                         </div>
                     </div>
