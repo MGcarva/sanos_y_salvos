@@ -7,7 +7,7 @@
 
 # AWS Credentials (local only)
 credentials.tf
-
+terraform.tfvars
 # PEM Keys
 *.pem
 *.key
