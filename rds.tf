@@ -17,7 +17,7 @@
 # ================================================================
 
 resource "aws_db_subnet_group" "main" {
-  name        = "${var.proyecto}-db-subnet-group"
+  name        = "${var.proyecto}-db-subnet-group-new"
   description = "Subnet group para RDS PostgreSQL en 2 AZs"
   subnet_ids  = [
     aws_subnet.privada_az_a.id,
@@ -28,7 +28,16 @@ resource "aws_db_subnet_group" "main" {
     Name     = "${var.proyecto}-db-subnet-group"
     Proyecto = var.proyecto
   }
+
+  # lifecycle {
+  #   ignore_changes = [subnet_ids]
+  # }
 }
+
+# import {
+#   to = aws_db_subnet_group.main
+#   id = "sanos-y-salvos-db-subnet-group-v2"
+# }
 
 # ================================================================
 # PARAMETER GROUP
@@ -37,7 +46,7 @@ resource "aws_db_subnet_group" "main" {
 # ================================================================
 
 resource "aws_db_parameter_group" "postgres15" {
-  name        = "${var.proyecto}-pg15"
+  name        = "${var.proyecto}-pg15-new"
   family      = "postgres15"
   description = "Parameter group para PostgreSQL 15 con soporte PostGIS"
 
@@ -53,6 +62,11 @@ resource "aws_db_parameter_group" "postgres15" {
   }
 }
 
+# import {
+#   to = aws_db_parameter_group.postgres15
+#   id = "sanos-y-salvos-pg15"
+# }
+
 # ================================================================
 # INSTANCIA RDS
 # Una sola instancia db.t3.micro (dentro del límite de Academy)
@@ -60,7 +74,7 @@ resource "aws_db_parameter_group" "postgres15" {
 # ================================================================
 
 resource "aws_db_instance" "main" {
-  identifier = "${var.proyecto}-postgres"
+  identifier = "${var.proyecto}-postgres-new"
 
   # Motor y versión
   engine         = "postgres"

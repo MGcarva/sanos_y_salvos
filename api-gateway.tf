@@ -1,87 +1,73 @@
 # ================================================================
-# API GATEWAY — HTTP API (v2)
-# Punto de entrada único para todas las peticiones HTTP
-# Reemplaza el ALB como router principal de la aplicación
-#
-# Ventajas sobre ALB:
-# - Manejo nativo de Lambda (sin target groups)
-# - CORS integrado a nivel de API
-# - Menor latencia (no hay backend EC2 que arrancar)
-# - Compatible con AWS Academy sin restricciones
-#
-# Rutas configuradas:
-#   ANY /api/auth/{proxy+}          → Lambda: auth-service
-#   ANY /api/mascotas/{proxy+}      → Lambda: ms-mascotas
-#   ANY /api/geo/{proxy+}           → Lambda: ms-geolocalizacion
-#   ANY /api/coincidencias/{proxy+} → Lambda: ms-coincidencias
-#   ANY /api/{proxy+}               → Lambda: bff-service (fallback)
-# ================================================================
-
-# ================================================================
-# API GATEWAY HTTP API
+# API GATEWAY HTTP API v2 — Punto de entrada único
+# Expone las Lambda functions vía HTTP
+# Más barato y simple que REST API (no tiene AZ cost)
 # ================================================================
 
 resource "aws_apigatewayv2_api" "main" {
   name          = "${var.proyecto}-api"
   protocol_type = "HTTP"
-  description   = "API Gateway para Sanos y Salvos — enruta hacia Lambdas en VPC"
-
-  cors_configuration {
-    allow_origins = ["*"]
-    allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-    allow_headers = ["Content-Type", "Authorization", "X-Amz-Date", "X-Api-Key"]
-    max_age       = 300
-  }
 
   tags = {
-    Name     = "${var.proyecto}-api-gateway"
+    Name     = "${var.proyecto}-api"
     Proyecto = var.proyecto
   }
 }
 
 # ================================================================
-# STAGE "$default" — Auto-deploy habilitado
-# La URL pública es: https://<id>.execute-api.us-east-1.amazonaws.com
-# (sin prefijo de stage, ideal para uso con SPAs)
+# INTEGRACIONES — Conecta rutas con Lambda functions
 # ================================================================
 
-resource "aws_apigatewayv2_stage" "default" {
-  api_id      = aws_apigatewayv2_api.main.id
-  name        = "$default"
-  auto_deploy = true
+data "aws_caller_identity" "current" {}
 
-  tags = {
-    Name     = "${var.proyecto}-stage-default"
-    Proyecto = var.proyecto
-  }
-}
-
-# ================================================================
-# INTEGRACIONES Y RUTAS — Una por microservicio
-# integration_type = "AWS_PROXY" → Lambda recibe el evento completo
-# payload_format_version = "2.0" → compatible con Lambda Web Adapter
-# ================================================================
-
-# --- auth-service ---
 resource "aws_apigatewayv2_integration" "auth" {
-  api_id                 = aws_apigatewayv2_api.main.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.auth.invoke_arn
+  api_id           = aws_apigatewayv2_api.main.id
+  integration_type = "AWS_PROXY"
+
+  integration_uri        = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${var.region}:${data.aws_caller_identity.current.account_id}:function:${var.proyecto}-auth-service/invocations"
   payload_format_version = "2.0"
 }
+
+resource "aws_apigatewayv2_integration" "bff" {
+  api_id           = aws_apigatewayv2_api.main.id
+  integration_type = "AWS_PROXY"
+
+  integration_uri        = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${var.region}:${data.aws_caller_identity.current.account_id}:function:${var.proyecto}-bff-service/invocations"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_integration" "mascotas" {
+  api_id           = aws_apigatewayv2_api.main.id
+  integration_type = "AWS_PROXY"
+
+  integration_uri        = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${var.region}:${data.aws_caller_identity.current.account_id}:function:${var.proyecto}-ms-mascotas/invocations"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_integration" "geo" {
+  api_id           = aws_apigatewayv2_api.main.id
+  integration_type = "AWS_PROXY"
+
+  integration_uri        = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${var.region}:${data.aws_caller_identity.current.account_id}:function:${var.proyecto}-ms-geolocalizacion/invocations"
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_integration" "coincidencias" {
+  api_id           = aws_apigatewayv2_api.main.id
+  integration_type = "AWS_PROXY"
+
+  integration_uri        = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${var.region}:${data.aws_caller_identity.current.account_id}:function:${var.proyecto}-ms-coincidencias/invocations"
+  payload_format_version = "2.0"
+}
+
+# ================================================================
+# RUTAS — Mapeo de URLs a servicios
+# ================================================================
 
 resource "aws_apigatewayv2_route" "auth" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "ANY /api/auth/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.auth.id}"
-}
-
-# --- ms-mascotas ---
-resource "aws_apigatewayv2_integration" "mascotas" {
-  api_id                 = aws_apigatewayv2_api.main.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.mascotas.invoke_arn
-  payload_format_version = "2.0"
 }
 
 resource "aws_apigatewayv2_route" "mascotas" {
@@ -90,26 +76,10 @@ resource "aws_apigatewayv2_route" "mascotas" {
   target    = "integrations/${aws_apigatewayv2_integration.mascotas.id}"
 }
 
-# --- ms-geolocalizacion ---
-resource "aws_apigatewayv2_integration" "geo" {
-  api_id                 = aws_apigatewayv2_api.main.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.geo.invoke_arn
-  payload_format_version = "2.0"
-}
-
 resource "aws_apigatewayv2_route" "geo" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "ANY /api/geo/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.geo.id}"
-}
-
-# --- ms-coincidencias ---
-resource "aws_apigatewayv2_integration" "coincidencias" {
-  api_id                 = aws_apigatewayv2_api.main.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.coincidencias.invoke_arn
-  payload_format_version = "2.0"
 }
 
 resource "aws_apigatewayv2_route" "coincidencias" {
@@ -118,16 +88,94 @@ resource "aws_apigatewayv2_route" "coincidencias" {
   target    = "integrations/${aws_apigatewayv2_integration.coincidencias.id}"
 }
 
-# --- bff-service (fallback — captura /api/* que no coincida con rutas específicas) ---
-resource "aws_apigatewayv2_integration" "bff" {
-  api_id                 = aws_apigatewayv2_api.main.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.bff.invoke_arn
-  payload_format_version = "2.0"
-}
-
 resource "aws_apigatewayv2_route" "bff" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "ANY /api/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.bff.id}"
+}
+
+resource "aws_apigatewayv2_route" "root" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "ANY /{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.bff.id}"
+}
+
+# ================================================================
+# PERMISOS — API Gateway puede invocar las Lambdas
+# ================================================================
+
+# Lambdas y permisos comentados - activar después de subir imágenes
+resource "aws_lambda_permission" "auth" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = "${var.proyecto}-auth-service"
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*"
+}
+
+resource "aws_lambda_permission" "bff" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = "${var.proyecto}-bff-service"
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*"
+}
+
+resource "aws_lambda_permission" "mascotas" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = "${var.proyecto}-ms-mascotas"
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*"
+}
+
+resource "aws_lambda_permission" "geo" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = "${var.proyecto}-ms-geolocalizacion"
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*"
+}
+
+resource "aws_lambda_permission" "coincidencias" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = "${var.proyecto}-ms-coincidencias"
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*"
+}
+
+# ================================================================
+# STAGE — Despliegue automático ($default)
+# ================================================================
+
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.main.id
+  name        = "$default"
+  auto_deploy = true
+
+  tags = {
+    Name     = "${var.proyecto}-stage"
+    Proyecto = var.proyecto
+  }
+}
+
+# ================================================================
+# OUTPUT — URL pública de la API
+# ================================================================
+
+output "api_endpoint" {
+  description = "URL pública de la API (HTTP API)"
+  value       = aws_apigatewayv2_stage.default.invoke_url
+}
+
+output "api_endpoints_map" {
+  description = "Endpoints individuales por servicio"
+  value = {
+    auth          = "${aws_apigatewayv2_stage.default.invoke_url}/api/auth"
+    mascotas      = "${aws_apigatewayv2_stage.default.invoke_url}/api/mascotas"
+    geo           = "${aws_apigatewayv2_stage.default.invoke_url}/api/geo"
+    coincidencias = "${aws_apigatewayv2_stage.default.invoke_url}/api/coincidencias"
+    bff           = "${aws_apigatewayv2_stage.default.invoke_url}/api"
+  }
 }

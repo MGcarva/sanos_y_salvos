@@ -67,23 +67,6 @@ variable "redis_password" {
 }
 
 # ================================================================
-# VARIABLES DE RABBITMQ (contenedor ECS)
-# ================================================================
-
-variable "rabbitmq_user" {
-  description = "Usuario administrador de RabbitMQ"
-  type        = string
-  default     = "sanosrabbit"
-}
-
-variable "rabbitmq_password" {
-  description = "Contraseña de RabbitMQ"
-  type        = string
-  sensitive   = true
-  default     = "SanosRabbit2026!"
-}
-
-# ================================================================
 # VARIABLES DE JWT Y SEGURIDAD
 # ================================================================
 
@@ -94,22 +77,4 @@ variable "jwt_secret" {
   default     = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
 }
 
-# ================================================================
-# VARIABLES DE CUENTA AWS
-# ================================================================
 
-variable "aws_account_id" {
-  description = "ID de la cuenta AWS Academy — se usa para construir URLs de ECR"
-  type        = string
-  default     = "111837322528"   # Se completa con tu Account ID de Academy
-}
-
-# ================================================================
-# EC2
-# ================================================================
-
-variable "key_pair_name" {
-  description = "Nombre del Key Pair de EC2 para acceso SSH (crearlo en consola AWS antes del deploy)"
-  type        = string
-  default     = "sanos-y-salvos-key"
-}

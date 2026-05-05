@@ -65,16 +65,15 @@ graph TD
 | `variables.tf` | Variables (proyecto, DB, región, etc.) |
 | `credentials.tf` | ⚠️ **NO en GitHub** — credenciales temporales Academy |
 | `vpc.tf` | VPC, subnets privadas/públicas (2 AZs), IGW, NAT |
-| `security-groups.tf` | SGs para Lambda, RDS, Redis, ALB |
+| `security-groups.tf` | SGs para Lambda, RDS, Redis |
 | `rds.tf` | RDS PostgreSQL 15 (Multi-AZ standby) |
 | `elasticache.tf` | ElastiCache Redis 7 |
 | `ecr.tf` | Repositorios ECR (uno por microservicio) |
-| `s3.tf` | Bucket S3 para fotos de mascotas y frontend |
+| `s3.tf` | Bucket S3 para fotos de mascotas |
 | `sqs.tf` | Colas SQS (reportes-nuevos, geo-completados, notificaciones + DLQs) |
 | `lambda.tf` | 5 funciones Lambda + SQS event source mappings |
 | `api-gateway.tf` | HTTP API Gateway + rutas + permisos |
 | `outputs.tf` | URLs, ARNs y datos de conexión útiles |
-| `init-databases.sql` | Schema completo para las 4 bases de datos |
 
 ---
 
@@ -85,71 +84,56 @@ graph TD
 Edita `credentials.tf` con los datos de tu sesión actual de AWS Academy (**AWS Details → AWS CLI**):
 
 ```hcl
-provider "aws" {
-  region     = "us-east-1"
-  access_key = "ASIA..."
-  secret_key = "..."
-  token      = "..."
+locals {
+  aws_access_key    = "ASIA..."
+  aws_secret_key    = "..."
+  aws_session_token = "..."
 }
 ```
 
-O usa el script automático:
-```powershell
-.\update-credentials.ps1
-```
-
-### 2. Limpia el estado anterior (nueva sesión Academy)
-
-```powershell
-if (Test-Path "terraform.tfstate") {
-    Rename-Item "terraform.tfstate" "terraform.tfstate.old"
-}
-```
-
-### 3. Inicializa y aplica Terraform
+### 2. Inicializa y aplica Terraform
 
 ```sh
-terraform init -upgrade
+terraform init
 terraform apply -auto-approve
 ```
 
 Tarda **10–15 minutos**. Crea: VPC · subnets · SGs · RDS · Redis · ECR · SQS · Lambdas · API Gateway.
 
 Al terminar, guarda los outputs:
+
 ```sh
 terraform output
 ```
 
-El dato más importante es `api_gateway_url` — es el punto de entrada de la aplicación.
+El dato más importante es `api_endpoint` — es el punto de entrada de la aplicación.
 
-### 4. Construye y publica las imágenes Docker en ECR
-
-```powershell
-# Login a ECR (usa el comando del output 'ecr_login_command')
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com
-
-# Build y push de cada microservicio
-cd ..\Sanos-y-Salvos
-
-# Ejemplo para ms-mascotas (repetir para los otros 4)
-docker build -t ms-mascotas ./ms-mascotas
-docker tag ms-mascotas:latest <ECR_URL>/ms-mascotas:latest
-docker push <ECR_URL>/ms-mascotas:latest
-```
-
-Las URLs ECR las encuentras en `terraform output docker_push_commands`.
-
-### 5. Recarga las funciones Lambda con la nueva imagen
+### 3. Construye y publica las imágenes Docker en ECR
 
 ```sh
-aws lambda update-function-code --function-name sanos-auth-service        --image-uri <ECR_URL>/auth-service:latest
-aws lambda update-function-code --function-name sanos-bff-service         --image-uri <ECR_URL>/bff-service:latest
-aws lambda update-function-code --function-name sanos-ms-mascotas         --image-uri <ECR_URL>/ms-mascotas:latest
-aws lambda update-function-code --function-name sanos-ms-geolocalizacion  --image-uri <ECR_URL>/ms-geolocalizacion:latest
-aws lambda update-function-code --function-name sanos-ms-coincidencias    --image-uri <ECR_URL>/ms-coincidencias:latest
+# Login a ECR
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com
+
+# Build y push de cada microservicio (repetir para los otros 4)
+cd ../Sanos-y-Salvos
+docker build -t auth-service ./auth-service
+docker tag auth-service:latest <ECR_URL>/auth-service:latest
+docker push <ECR_URL>/auth-service:latest
 ```
 
-### 6. Inicializa las bases de datos en RDS
+Las URLs ECR las encuentras en `terraform output ecr_urls`.
+
+### 4. Recarga las funciones Lambda con la nueva imagen
+
+```sh
+aws lambda update-function-code --function-name sanos-y-salvos-auth-service --image-uri <ECR_URL>/auth-service:latest
+aws lambda update-function-code --function-name sanos-y-salvos-bff-service --image-uri <ECR_URL>/bff-service:latest
+aws lambda update-function-code --function-name sanos-y-salvos-ms-mascotas --image-uri <ECR_URL>/ms-mascotas:latest
+aws lambda update-function-code --function-name sanos-y-salvos-ms-geolocalizacion --image-uri <ECR_URL>/ms-geolocalizacion:latest
+aws lambda update-function-code --function-name sanos-y-salvos-ms-coincidencias --image-uri <ECR_URL>/ms-coincidencias:latest
+```
+
+### 5. Inicializa las bases de datos en RDS
 
 ```sh
 psql -h <RDS_HOST> -U sanosadmin -d postgres -f init-databases.sql
@@ -157,24 +141,11 @@ psql -h <RDS_HOST> -U sanosadmin -d postgres -f init-databases.sql
 
 El `RDS_HOST` lo encuentras en `terraform output rds_host`.
 
-### 7. Despliega el frontend en S3
-
-```powershell
-.\deploy-frontend.ps1
-```
-
-O manualmente:
-```sh
-cd ..\Sanos-y-Salvos\frontend
-npm install && npm run build
-aws s3 sync dist/ s3://sanos-y-salvos-mascotas-fotos/ --delete
-```
-
-### 8. Verifica la aplicación
+### 6. Verifica la aplicación
 
 ```sh
 # La URL del API Gateway (sin trailing slash)
-API=$(terraform output -raw api_gateway_url)
+API=$(terraform output -raw api_endpoint)
 
 # Catálogo de especies (sin JWT)
 curl $API/api/mascotas/especies
@@ -203,11 +174,14 @@ curl -X POST $API/api/auth/login \
 ```
 especies (id, nombre)          → PERRO, GATO, AVE, CONEJO, OTRO
   └─> razas (id, especie_id, nombre)    → Labrador, Siamés, etc.
-        └─> reportes (id, tipo, especie_id, raza_id, ...)
-              ├── tipo = "PERDIDO"   → campos recompensa
-              └── tipo = "ENCONTRADO" → campos lugar_resguardo, tiene_collar
+         └─> reportes (id, tipo, especie_id, raza_id, ...)
+               ├── tipo = "PERDIDO"   → campos recompensa
+               └── tipo = "ENCONTRADO" → campos lugar_resguardo, tiene_collar
 ```
 
 ---
 
-¿Dudas? Revisa `DEPLOY_GUIDE.md` para la guía paso a paso completa con solución de problemas.
+## Repositorio de Microservicios
+
+El código fuente de los microservicios está en:  
+`../Sanos-y-Salvos/` (Repositorio separado)

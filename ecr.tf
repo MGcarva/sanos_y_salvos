@@ -7,14 +7,13 @@
 # ================================================================
 
 locals {
-  # Lista de los 6 servicios — se usa para crear los repositorios en bucle
+  # Lista de los 5 servicios — se usa para crear los repositorios en bucle
   servicios = [
     "auth-service",
     "ms-mascotas",
     "ms-geolocalizacion",
     "ms-coincidencias",
-    "bff-service",
-    "frontend"
+    "bff-service"
   ]
 }
 
@@ -39,6 +38,31 @@ resource "aws_ecr_repository" "servicios" {
     Proyecto = var.proyecto
     Ambiente = var.ambiente
   }
+}
+
+import {
+  to = aws_ecr_repository.servicios["auth-service"]
+  id = "sanos-y-salvos/auth-service"
+}
+
+import {
+  to = aws_ecr_repository.servicios["bff-service"]
+  id = "sanos-y-salvos/bff-service"
+}
+
+import {
+  to = aws_ecr_repository.servicios["ms-mascotas"]
+  id = "sanos-y-salvos/ms-mascotas"
+}
+
+import {
+  to = aws_ecr_repository.servicios["ms-geolocalizacion"]
+  id = "sanos-y-salvos/ms-geolocalizacion"
+}
+
+import {
+  to = aws_ecr_repository.servicios["ms-coincidencias"]
+  id = "sanos-y-salvos/ms-coincidencias"
 }
 
 # ================================================================
@@ -86,5 +110,5 @@ output "ecr_urls" {
 
 output "ecr_registry" {
   description = "URL base del registry ECR de tu cuenta — usa esto en docker login"
-  value       = "${var.aws_account_id}.dkr.ecr.${var.region}.amazonaws.com"
+  value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.region}.amazonaws.com"
 }

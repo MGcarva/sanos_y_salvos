@@ -1,11 +1,26 @@
-# Archivos con credenciales sensibles — NUNCA subir a GitHub
-credentials.tf
-*.tfvars
-terraform.tfstate
-terraform.tfstate.backup
-terraform.tfstate.*.backup
-tfplan
+# Terraform state and backups
+*.tfstate
+*.tfstate.backup
+*.tfstate.*
 .terraform/
 .terraform.lock.hcl
-backend-config.json
+
+# AWS Credentials (local only)
+credentials.tf
+
+# PEM Keys
 *.pem
+*.key
+
+# Logs
+*.log
+*.txt
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

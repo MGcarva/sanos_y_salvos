@@ -4,7 +4,7 @@
 # ================================================================
 
 resource "aws_elasticache_subnet_group" "main" {
-  name        = "${var.proyecto}-redis-subnet-group"
+  name        = "${var.proyecto}-redis-subnet-group-new"
   description = "Subnet group para Redis en 2 AZs"
   subnet_ids  = [
     aws_subnet.privada_az_a.id,
@@ -15,10 +15,24 @@ resource "aws_elasticache_subnet_group" "main" {
     Name     = "${var.proyecto}-redis-subnet-group"
     Proyecto = var.proyecto
   }
+
+  lifecycle {
+    ignore_changes = [subnet_ids]
+  }
 }
 
+# import {
+#   to = aws_elasticache_subnet_group.main
+#   id = "sanos-y-salvos-redis-subnet-group-v2"
+# }
+
+# import {
+#   to = aws_elasticache_cluster.redis
+#   id = "sanos-y-salvos-redis-v2"
+# }
+
 resource "aws_elasticache_cluster" "redis" {
-  cluster_id           = "${var.proyecto}-redis"
+  cluster_id           = "${var.proyecto}-redis-new"
   engine               = "redis"
   engine_version       = "7.1"
   node_type            = var.redis_node_type   # cache.t3.micro
