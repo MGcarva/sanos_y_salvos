@@ -1,0 +1,92 @@
+REPOSITORIOS DEL PROYECTO — SANOS Y SALVOS
+==========================================
+Evaluación Parcial N°2 — DSY1106 Desarrollo Fullstack III
+
+REPOSITORIO PRINCIPAL
+─────────────────────
+URL: https://github.com/mgcarva/sanos_y_salvos
+Descripción: Repositorio principal del proyecto. Contiene todos los componentes:
+  - Frontend React (directorio /frontend)
+  - BFF Service — Backend For Frontend (directorio /bff-service)
+  - MS-Mascotas — Microservicio de reportes (directorio /ms-mascotas)
+  - MS-Geolocalizacion — Microservicio geográfico (directorio /ms-geolocalizacion)
+  - MS-Coincidencias — Microservicio de matching (directorio /ms-coincidencias)
+  - Auth Service — Autenticación JWT (directorio /auth-service)
+  - Infraestructura Terraform AWS (archivos .tf en raíz)
+  - Docker Compose para entorno local (docker-compose.yml)
+  - Documentación completa (directorio /docs)
+
+COMPONENTES FRONTEND
+────────────────────
+Directorio: /frontend
+URL: https://github.com/mgcarva/sanos_y_salvos/tree/master/frontend
+Tecnología: React 18 + Vite + Leaflet + Bootstrap
+Descripción: SPA (Single Page Application) para gestión de reportes de mascotas.
+  Incluye mapa interactivo, autenticación, formulario de reporte y visualización
+  de coincidencias. Empaquetado como componente NPM estándar con package.json.
+
+BACKEND FOR FRONTEND (BFF)
+──────────────────────────
+Directorio: /bff-service
+URL: https://github.com/mgcarva/sanos_y_salvos/tree/master/bff-service
+Tecnología: Spring Boot 3.2.5 + WebFlux + Resilience4j
+Descripción: API Gateway único para el frontend. Implementa los patrones Proxy,
+  Circuit Breaker y Facade. Orquesta las llamadas a los microservicios internos
+  y valida tokens JWT.
+
+MICROSERVICIO 1 — AUTH SERVICE
+───────────────────────────────
+Directorio: /auth-service
+URL: https://github.com/mgcarva/sanos_y_salvos/tree/master/auth-service
+Tecnología: Spring Boot 3.2.5 + Spring Security + JJWT + Redis
+Descripción: Microservicio de autenticación y gestión de usuarios. Genera tokens
+  JWT de acceso y refresco. Usa Redis para caché de sesiones y rate limiting.
+
+MICROSERVICIO 2 — MS-MASCOTAS
+──────────────────────────────
+Directorio: /ms-mascotas
+URL: https://github.com/mgcarva/sanos_y_salvos/tree/master/ms-mascotas
+Tecnología: Spring Boot 3.2.5 + Spring AMQP + MinIO + PostgreSQL
+Descripción: Microservicio de gestión de reportes de mascotas. Implementa el
+  patrón Factory Method para crear reportes de tipo PERDIDO/ENCONTRADO, y el
+  patrón Observer para publicar eventos en RabbitMQ.
+
+MICROSERVICIO 3 — MS-GEOLOCALIZACION
+──────────────────────────────────────
+Directorio: /ms-geolocalizacion
+URL: https://github.com/mgcarva/sanos_y_salvos/tree/master/ms-geolocalizacion
+Tecnología: Spring Boot 3.2.5 + PostGIS + Hibernate Spatial + RabbitMQ
+Descripción: Microservicio de procesamiento geográfico. Genera clusters y mapas
+  de calor usando PostGIS. Consume eventos de RabbitMQ (Observer) y aplica
+  algoritmo K-means (Strategy).
+
+MICROSERVICIO 4 — MS-COINCIDENCIAS
+─────────────────────────────────────
+Directorio: /ms-coincidencias
+URL: https://github.com/mgcarva/sanos_y_salvos/tree/master/ms-coincidencias
+Tecnología: Spring Boot 3.2.5 + FuzzyWuzzy + RabbitMQ + PostgreSQL
+Descripción: Microservicio de matching entre mascotas perdidas y encontradas.
+  Usa FuzzyWuzzy para similitud de texto y un sistema de scoring multi-criterio
+  (Strategy Pattern). Consume eventos de RabbitMQ (Observer).
+
+ARQUETIPOS MAVEN
+────────────────
+Directorio: /maven-archetypes
+URL: https://github.com/mgcarva/sanos_y_salvos/tree/master/maven-archetypes
+Descripción: Arquetipo Maven personalizado para generar nuevos microservicios
+  en el ecosistema Sanos y Salvos con configuración base preestablecida.
+
+DOCUMENTACIÓN
+─────────────
+Directorio: /docs
+  - PATRONES_DISEÑO.md   → Análisis completo de patrones de diseño y arquetipos
+  - PLAN_BRANCHING.md    → Estrategia Git Flow con evidencia de merges y ramas
+  - (convertir a PDF para entrega final)
+
+INFRAESTRUCTURA
+───────────────
+Directorio: raíz del repositorio
+  - Terraform (.tf files) → Infraestructura AWS como código
+  - docker-compose.yml    → Entorno de desarrollo local
+  - DEPLOY_GUIDE.md       → Guía técnica de despliegue
+  - GUIA_DESPLIEGUE_EDUCATIVA.md → Guía educativa de despliegue
