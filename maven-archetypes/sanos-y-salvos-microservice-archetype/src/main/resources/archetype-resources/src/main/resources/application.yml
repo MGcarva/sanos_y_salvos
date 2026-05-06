@@ -1,0 +1,33 @@
+server:
+  port: ${servicePort}
+
+spring:
+  application:
+    name: ${artifactId}
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/${databaseName}
+    username: ${DB_USER:sanosadmin}
+    password: ${DB_PASS:sanospassword}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+
+jwt:
+  secret: ${JWT_SECRET:clave_secreta_debe_tener_al_menos_32_caracteres}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
