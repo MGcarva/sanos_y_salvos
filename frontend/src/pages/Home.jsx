@@ -83,9 +83,15 @@ export default function Home() {
                             )}
                         </div>
                         <div className="col-lg-5 text-center d-none d-lg-block">
-                            <div style={{ fontSize: '10rem', lineHeight: 1, opacity: 0.3 }}>
-                                {user?.rol === 'REFUGIO' ? '🏠' : '🐾'}
-                            </div>
+                            {user?.rol === 'REFUGIO' ? (
+                                <div style={{ fontSize: '10rem', lineHeight: 1, opacity: 0.3 }}>🏠</div>
+                            ) : (
+                                <img
+                                    src="/assets/mascotas.jpeg"
+                                    alt="Mascotas felices"
+                                    className="hero-mascotas-img"
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
@@ -95,25 +101,43 @@ export default function Home() {
                 {/* Stats */}
                 <div className="row g-4 mb-5" style={{ marginTop: '-2rem' }}>
                     <div className="col-md-4">
-                        <div className="stat-card perdidos">
-                            <div className="stat-number text-danger">{perdidos.length}</div>
-                            <div className="stat-label">Mascotas Perdidas</div>
-                            <i className="bi bi-search-heart" style={{ fontSize: '1.5rem', color: '#e6394640', marginTop: '0.5rem' }}></i>
-                        </div>
+                        <Link to="/perdidos" className="text-decoration-none">
+                            <div className="stat-card perdidos stat-card-clickable">
+                                <div className="d-flex justify-content-between align-items-start mb-2">
+                                    <div className="stat-number text-danger">{perdidos.length}</div>
+                                    <i className="bi bi-arrow-right-circle text-danger opacity-50 fs-5 mt-1"></i>
+                                </div>
+                                <div className="stat-label mb-2">Mascotas Perdidas</div>
+                                <img src="/assets/perdida.jpg" alt="Mascota perdida" className="stat-card-img" />
+                                <small className="text-danger fw-semibold d-block mt-2">Ver todas →</small>
+                            </div>
+                        </Link>
                     </div>
                     <div className="col-md-4">
-                        <div className="stat-card encontrados">
-                            <div className="stat-number text-success">{encontrados.length}</div>
-                            <div className="stat-label">Mascotas Encontradas</div>
-                            <i className="bi bi-check-circle" style={{ fontSize: '1.5rem', color: '#2a9d8f40', marginTop: '0.5rem' }}></i>
-                        </div>
+                        <Link to="/encontrados" className="text-decoration-none">
+                            <div className="stat-card encontrados stat-card-clickable">
+                                <div className="d-flex justify-content-between align-items-start mb-2">
+                                    <div className="stat-number text-success">{encontrados.length}</div>
+                                    <i className="bi bi-arrow-right-circle text-success opacity-50 fs-5 mt-1"></i>
+                                </div>
+                                <div className="stat-label mb-2">Mascotas Encontradas</div>
+                                <img src="/assets/encontrada.jpg" alt="Mascota encontrada" className="stat-card-img" />
+                                <small className="text-success fw-semibold d-block mt-2">Ver todas →</small>
+                            </div>
+                        </Link>
                     </div>
                     <div className="col-md-4">
-                        <div className="stat-card total">
-                            <div className="stat-number text-primary">{data.reportes.length}</div>
-                            <div className="stat-label">Reportes Activos</div>
-                            <i className="bi bi-clipboard-data" style={{ fontSize: '1.5rem', color: '#4361ee40', marginTop: '0.5rem' }}></i>
-                        </div>
+                        <Link to="/estadisticas" className="text-decoration-none">
+                            <div className="stat-card total stat-card-clickable">
+                                <div className="d-flex justify-content-between align-items-start mb-2">
+                                    <div className="stat-number text-primary">{data.reportes.length}</div>
+                                    <i className="bi bi-arrow-right-circle text-primary opacity-50 fs-5 mt-1"></i>
+                                </div>
+                                <div className="stat-label mb-2">Reportes Activos</div>
+                                <img src="/assets/reporte.jpg" alt="Reportes" className="stat-card-img" />
+                                <small className="text-primary fw-semibold d-block mt-2">Ver estadísticas →</small>
+                            </div>
+                        </Link>
                     </div>
                 </div>
 

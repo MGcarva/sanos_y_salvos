@@ -34,7 +34,7 @@ export default function Footer() {
                         <h6 className="text-white fw-bold mb-3">Contacto</h6>
                         <ul className="list-unstyled small">
                             <li className="mb-1"><i className="bi bi-envelope me-2"></i>info@sanosysalvos.com</li>
-                            <li className="mb-1"><i className="bi bi-geo-alt me-2"></i>Bogotá, Colombia</li>
+                            <li className="mb-1"><i className="bi bi-geo-alt me-2"></i>Melipilla, Chile</li>
                         </ul>
                     </div>
                 </div>

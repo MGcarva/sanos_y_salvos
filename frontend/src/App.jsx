@@ -12,6 +12,9 @@ import MisReportes from './pages/MisReportes'
 import ReporteDetalle from './pages/ReporteDetalle'
 import VerifyEmail from './pages/VerifyEmail'
 import NotFound from './pages/NotFound'
+import MascotasPerdidas from './pages/MascotasPerdidas'
+import MascotasEncontradas from './pages/MascotasEncontradas'
+import Estadisticas from './pages/Estadisticas'
 
 function App() {
   return (
@@ -27,6 +30,9 @@ function App() {
               <Route path="/mapa" element={<Mapa />} />
               <Route path="/reporte/:id" element={<ReporteDetalle />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/perdidos" element={<MascotasPerdidas />} />
+              <Route path="/encontrados" element={<MascotasEncontradas />} />
+              <Route path="/estadisticas" element={<Estadisticas />} />
               <Route path="/reportar" element={<PrivateRoute><Reportar /></PrivateRoute>} />
               <Route path="/mis-reportes" element={<PrivateRoute><MisReportes /></PrivateRoute>} />
               <Route path="*" element={<NotFound />} />
