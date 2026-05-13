@@ -1,4 +1,7 @@
 # Archivos con credenciales sensibles — NUNCA subir a GitHub
+.env
+.env.*
+!.env.example
 credentials.tf
 *.tfvars
 terraform.tfstate
