@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import PrivateRoute from './components/PrivateRoute'
+import ChatWidget from './components/ChatWidget'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -39,6 +40,7 @@ function App() {
             </Routes>
           </main>
           <Footer />
+          <ChatWidget />
         </div>
       </Router>
     </AuthProvider>

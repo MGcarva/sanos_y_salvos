@@ -67,4 +67,20 @@ public class ReporteController {
             @RequestParam Reporte.EstadoReporte estado) {
         return ResponseEntity.ok(reporteService.actualizarEstado(id, estado));
     }
+
+    @GetMapping("/buscar")
+    @Operation(summary = "Buscar reportes por características",
+            description = "Búsqueda avanzada de reportes activos filtrando por tipo, especie, raza, color, nombre, tamaño y dirección. " +
+                    "Todos los parámetros son opcionales. La búsqueda es case-insensitive y admite coincidencias parciales.")
+    public ResponseEntity<List<ReporteResponseDTO>> buscarPorCaracteristicas(
+            @RequestParam(required = false) String tipo,
+            @RequestParam(required = false) String especie,
+            @RequestParam(required = false) String raza,
+            @RequestParam(required = false) String color,
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = false) Reporte.Tamano tamano,
+            @RequestParam(required = false) String direccion) {
+        return ResponseEntity.ok(reporteService.buscarPorCaracteristicas(
+                tipo, especie, raza, color, nombre, tamano, direccion));
+    }
 }

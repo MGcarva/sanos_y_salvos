@@ -11,6 +11,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -85,6 +87,52 @@ public class MascotasProxyService {
         ResponseEntity<Map> r = restTemplate.exchange(
                 mascotasUrl + "/api/reportes/" + id + "/estado?estado=" + estado,
                 HttpMethod.PATCH, entity, Map.class);
+        return ResponseEntity.status(r.getStatusCode()).body(r.getBody());
+    }
+
+    /**
+     * Búsqueda avanzada de reportes por características
+     */
+    public ResponseEntity<List> buscarPorCaracteristicas(
+            String tipo, String especie, String raza, String color, String nombre, String tamano, String direccion) {
+        StringBuilder url = new StringBuilder(mascotasUrl + "/api/reportes/buscar?");
+        boolean hasParam = false;
+
+        if (tipo != null && !tipo.isEmpty()) {
+            url.append("tipo=").append(tipo);
+            hasParam = true;
+        }
+        if (especie != null && !especie.isEmpty()) {
+            if (hasParam) url.append("&");
+            url.append("especie=").append(especie);
+            hasParam = true;
+        }
+        if (raza != null && !raza.isEmpty()) {
+            if (hasParam) url.append("&");
+            url.append("raza=").append(raza);
+            hasParam = true;
+        }
+        if (color != null && !color.isEmpty()) {
+            if (hasParam) url.append("&");
+            url.append("color=").append(color);
+            hasParam = true;
+        }
+        if (nombre != null && !nombre.isEmpty()) {
+            if (hasParam) url.append("&");
+            url.append("nombre=").append(nombre);
+            hasParam = true;
+        }
+        if (tamano != null && !tamano.isEmpty()) {
+            if (hasParam) url.append("&");
+            url.append("tamano=").append(tamano);
+            hasParam = true;
+        }
+        if (direccion != null && !direccion.isEmpty()) {
+            if (hasParam) url.append("&");
+            url.append("direccion=").append(URLEncoder.encode(direccion, StandardCharsets.UTF_8));
+        }
+
+        ResponseEntity<List> r = restTemplate.getForEntity(url.toString(), List.class);
         return ResponseEntity.status(r.getStatusCode()).body(r.getBody());
     }
 }

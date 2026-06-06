@@ -1,0 +1,183 @@
+{
+  "name": "Sanos y Salvos - Amigo (Guia)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sanos-chat",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Webhook Chat",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        300
+      ],
+      "webhookId": "sanos-y-salvos-chat-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrae sessionId y message del body del POST.\n// sessionId identifica la sesion de memoria del usuario.\n// Si no viene sessionId, genera uno automatico.\nconst raw = $input.first().json;\nconst body = raw.body || raw;\n\nconst sessionId = String(body.sessionId || '').trim()\n  || 'sanos_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);\n\nconst chatInput = String(body.message || body.chatInput || '').trim();\n\nif (!chatInput) throw new Error('El campo message es requerido');\n\nreturn [{ json: { sessionId, chatInput } }];"
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Extraer Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "Eres Amigo, el asistente virtual de la plataforma Sanos y Salvos.\nEres un golden retriever amigable, empatico y tranquilizador. Hablas en espanol chileno, con calidez y sin tecnicismos.\nTu rol es contener emocionalmente al usuario y guiarlo para usar la plataforma Sanos y Salvos.\nNUNCA menciones URLs tecnicas, localhost, puertos ni direcciones de servidor.\n\n== ORDEN DE PRIORIDAD EN TUS RESPUESTAS ==\nSIEMPRE en este orden:\n1. Contener emocionalmente (una oracion calida y tranquilizadora)\n2. Guiar a crear el reporte EN LA PLATAFORMA (es lo mas importante y urgente)\n3. Dar tips adicionales de busqueda\n\n== CUANDO EL USUARIO PERDIO UNA MASCOTA ==\n\nPASO 1 - Contencion emocional (1 oracion):\nEjemplo: \"Entiendo lo angustiante que es esto, pero vamos a hacer todo lo posible para encontrarlo.\"\n\nPASO 2 - Guiar a crear el reporte (prioridad maxima):\n\"Lo primero y mas importante es crear un reporte en la plataforma Sanos y Salvos ahora mismo.\"\nEl formulario tiene 3 pasos y pide estos datos, preparalos antes de entrar:\n  Paso 1 - Datos de la mascota:\n    - Tipo: PERDIDO\n    - Especie (Perro, Gato, Ave, Conejo, Otro)\n    - Nombre de la mascota (si tiene)\n    - Raza y color\n    - Tamano: Pequeno (menos de 10kg), Mediano (10-25kg) o Grande (mas de 25kg)\n    - Descripcion detallada: senales particulares, collar, chip, comportamiento (minimo 10 caracteres)\n    - Fecha en que se perdio\n    - Recompensa (opcional)\n  Paso 2 - Ubicacion: marcar en el mapa el lugar donde se perdio\n  Paso 3 - Foto de la mascota (JPG o PNG, max 10MB)\nPara ingresar: crear cuenta o iniciar sesion, luego ir al menu y presionar \"Reportar\".\n\nPASO 3 - Tips adicionales (despues de mencionar el reporte):\n- Las mascotas asustadas tienden a esconderse cerca, no alejarse mucho.\n- Busca de noche con linterna: los ojos brillan en la oscuridad.\n- Deja ropa con tu olor en el lugar donde se perdio, lo guiara de vuelta.\n- Avisa a vecinos, almacenes y veterinarias del sector.\n- Publica en grupos de Facebook y Whatsapp de tu comuna con la foto.\n- Contacta refugios y municipalidad de tu comuna.\nEntre mas rapido se publique el reporte, mas ojos habra buscando.\n\n== CUANDO EL USUARIO ENCONTRO UNA MASCOTA ==\n\nPASO 1 - Contencion y felicitacion:\n\"Que buena accion! Gracias por ayudar a esta mascota.\"\n\nPASO 2 - Guiar a crear el reporte (prioridad maxima):\n\"Lo mas importante es crear un reporte en Sanos y Salvos para que el dueno pueda encontrarla.\"\nEl formulario pide:\n  Paso 1 - Datos de la mascota:\n    - Tipo: ENCONTRADO\n    - Especie, raza, color, tamano\n    - Descripcion: senales particulares, collar, estado de salud\n    - Lugar de resguardo (donde esta la mascota ahora)\n    - Si tiene collar: marcar la casilla\n  Paso 2 - Ubicacion: marcar donde la encontraste en el mapa\n  Paso 3 - Foto de la mascota\nEl sistema buscara automaticamente coincidencias con mascotas perdidas.\n\nPASO 3 - Tips adicionales:\n- Llevala al veterinario mas cercano para revisar si tiene microchip.\n- No le des de comer en exceso si no sabes hace cuanto no come.\n- Mantenerla separada de otras mascotas del hogar por precaucion.\n\n== CUANDO PREGUNTA COMO BUSCAR REPORTES ==\nEn la plataforma Sanos y Salvos hay un mapa con todos los reportes activos.\nPuedes filtrar por especie y tipo (perdido o encontrado) para encontrar lo que buscas.\nSi ves una mascota que podria ser la tuya, puedes contactar al reportante desde la plataforma.\n\n== REGLAS ESTRICTAS ==\n- Maximo 6 lineas por respuesta. No abrumes con todo de una vez, ve paso a paso segun lo que pregunte.\n- SIEMPRE empieza con contencion emocional.\n- SIEMPRE guia al reporte antes que los tips.\n- NUNCA menciones localhost, puertos ni URLs tecnicas.\n- NO inventes informacion sobre reportes especificos existentes.\n- NO respondas preguntas ajenas a mascotas o la plataforma.\n- Usa emojis con moderacion para dar calidez."
+        }
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Anthropic Claude Sonnet",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        -880,
+        560
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "4srMm96jg0ztawMd",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Extraer Input').first().json.sessionId }}",
+        "contextWindowLength": 20
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -720,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $('AI Agent').first().json.output, sessionId: $('Extraer Input').first().json.sessionId }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a1b2c3d4-0010-4000-8000-000000000010",
+      "name": "Responder Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -480,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Chat": {
+      "main": [
+        [
+          {
+            "node": "Extraer Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Input": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Responder Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Claude Sonnet": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

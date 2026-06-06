@@ -72,5 +72,9 @@ public abstract class Reporte {
         ACTIVO, INACTIVO, RESUELTO
     }
 
+    public enum TipoReporte {
+        PERDIDO, ENCONTRADO
+    }
+
     public abstract String getTipo();
 }

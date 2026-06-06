@@ -23,6 +23,9 @@ public class MinioService {
     @Value("${minio.endpoint}")
     private String endpoint;
 
+    @Value("${minio.public-url:}")
+    private String publicUrl;
+
     public String uploadImage(MultipartFile file, UUID reporteId) {
         try {
             String fileName = "reportes/" + reporteId + "/" + file.getOriginalFilename();
@@ -36,7 +39,8 @@ public class MinioService {
                         .build());
             }
 
-            String url = endpoint + "/" + bucket + "/" + fileName;
+            String baseUrl = (publicUrl != null && !publicUrl.isBlank()) ? publicUrl : endpoint;
+            String url = baseUrl + "/" + bucket + "/" + fileName;
             log.info("Imagen subida: {}", url);
             return url;
         } catch (Exception e) {

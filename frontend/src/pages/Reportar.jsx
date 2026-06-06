@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { reportesService } from '../services/services';
@@ -20,6 +20,14 @@ function LocationPicker({ position, onPositionChange }) {
     return position ? <Marker position={position} icon={markerIcon} /> : null;
 }
 
+function MapController({ position }) {
+    const map = useMap();
+    useEffect(() => {
+        if (position) map.flyTo(position, 16);
+    }, [position, map]);
+    return null;
+}
+
 const ESPECIES = [
     { value: 'Perro', icon: '🐕', label: 'Perro' },
     { value: 'Gato', icon: '🐈', label: 'Gato' },
@@ -28,7 +36,7 @@ const ESPECIES = [
     { value: 'Otro', icon: '🐾', label: 'Otro' }
 ];
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
 
 export default function Reportar() {
@@ -46,6 +54,11 @@ export default function Reportar() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [busquedaDireccion, setBusquedaDireccion] = useState('');
+    const [buscandoDireccion, setBuscandoDireccion] = useState(false);
+    const [geocodificando, setGeocodificando] = useState(false);
+    const [razas, setRazas] = useState([]);
+    const [cargandoRazas, setCargandoRazas] = useState(false);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -76,22 +89,102 @@ export default function Reportar() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
+    useEffect(() => {
+        if (form.especie !== 'Perro' && form.especie !== 'Gato') {
+            setRazas([]);
+            return;
+        }
+        setCargandoRazas(true);
+        if (form.especie === 'Perro') {
+            fetch('https://dog.ceo/api/breeds/list/all')
+                .then(r => r.json())
+                .then(data => {
+                    const lista = [];
+                    Object.entries(data.message).forEach(([breed, subs]) => {
+                        const b = breed.charAt(0).toUpperCase() + breed.slice(1);
+                        if (subs.length === 0) {
+                            lista.push(b);
+                        } else {
+                            subs.forEach(sub =>
+                                lista.push(b + ' ' + sub.charAt(0).toUpperCase() + sub.slice(1))
+                            );
+                        }
+                    });
+                    setRazas(lista.sort());
+                })
+                .catch(() => setRazas([]))
+                .finally(() => setCargandoRazas(false));
+        } else {
+            fetch('https://api.thecatapi.com/v1/breeds')
+                .then(r => r.json())
+                .then(data => setRazas(data.map(b => b.name).sort()))
+                .catch(() => setRazas([]))
+                .finally(() => setCargandoRazas(false));
+        }
+    }, [form.especie]);
+
+    const obtenerDireccion = useCallback(async (lat, lng) => {
+        setGeocodificando(true);
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+                { headers: { 'Accept-Language': 'es' } }
+            );
+            const data = await res.json();
+            if (data.display_name) {
+                setForm(prev => ({ ...prev, direccion: data.display_name }));
+            }
+        } catch {
+            // fallo silencioso — el usuario puede escribir la dirección manualmente
+        } finally {
+            setGeocodificando(false);
+        }
+    }, []);
+
     const handlePositionChange = useCallback((lat, lng) => {
         setForm(prev => ({ ...prev, lat, lng }));
-    }, []);
+        obtenerDireccion(lat, lng);
+    }, [obtenerDireccion]);
 
     const getLocation = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 pos => {
-                    setForm(prev => ({
-                        ...prev,
-                        lat: pos.coords.latitude.toFixed(6),
-                        lng: pos.coords.longitude.toFixed(6)
-                    }));
+                    const lat = pos.coords.latitude.toFixed(6);
+                    const lng = pos.coords.longitude.toFixed(6);
+                    setForm(prev => ({ ...prev, lat, lng }));
+                    obtenerDireccion(lat, lng);
                 },
                 () => setError('No se pudo obtener la ubicación. Haz clic en el mapa.')
             );
+        }
+    };
+
+    const buscarDireccion = async () => {
+        if (!busquedaDireccion.trim()) return;
+        setBuscandoDireccion(true);
+        setError('');
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(busquedaDireccion)}&format=json&limit=1`,
+                { headers: { 'Accept-Language': 'es' } }
+            );
+            const data = await res.json();
+            if (data.length > 0) {
+                const { lat, lon, display_name } = data[0];
+                setForm(prev => ({
+                    ...prev,
+                    lat: parseFloat(lat).toFixed(6),
+                    lng: parseFloat(lon).toFixed(6),
+                    direccion: display_name
+                }));
+            } else {
+                setError('No se encontró esa dirección. Intenta con más detalles o haz clic en el mapa.');
+            }
+        } catch {
+            setError('Error al buscar la dirección. Verifica tu conexión.');
+        } finally {
+            setBuscandoDireccion(false);
         }
     };
 
@@ -246,10 +339,28 @@ export default function Reportar() {
                                                        value={form.nombre} onChange={handleChange} />
                                             </div>
                                             <div className="col-md-6 mb-3">
-                                                <label className="form-label">Raza</label>
-                                                <input type="text" name="raza" className="form-control"
-                                                       placeholder="Ej: Labrador, Siamés, Criollo"
-                                                       value={form.raza} onChange={handleChange} />
+                                                <label className="form-label">
+                                                    Raza
+                                                    {cargandoRazas && (
+                                                        <span className="spinner-border spinner-border-sm ms-2 text-primary"
+                                                              style={{ width: '12px', height: '12px' }}></span>
+                                                    )}
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="raza"
+                                                    className="form-control"
+                                                    placeholder={razas.length > 0 ? "Escribe para buscar raza..." : "Ej: Labrador, Siamés, Criollo"}
+                                                    list={razas.length > 0 ? "razas-list" : undefined}
+                                                    value={form.raza}
+                                                    onChange={handleChange}
+                                                    autoComplete="off"
+                                                />
+                                                {razas.length > 0 && (
+                                                    <datalist id="razas-list">
+                                                        {razas.map(r => <option key={r} value={r} />)}
+                                                    </datalist>
+                                                )}
                                             </div>
                                         </div>
 
@@ -338,9 +449,35 @@ export default function Reportar() {
                                             <i className="bi bi-geo-alt me-2 text-primary"></i>
                                             Ubicación
                                         </h5>
-                                        <p className="text-muted small mb-3">
-                                            Haz clic en el mapa para seleccionar la ubicación, o usa el botón GPS.
-                                        </p>
+
+                                        {/* Buscador de dirección - Nominatim */}
+                                        <div className="mb-3">
+                                            <label className="form-label fw-semibold">
+                                                <i className="bi bi-search me-1"></i> Buscar por dirección
+                                            </label>
+                                            <div className="input-group">
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    placeholder="Ej: Calle Libertad 111, Melipilla..."
+                                                    value={busquedaDireccion}
+                                                    onChange={e => setBusquedaDireccion(e.target.value)}
+                                                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), buscarDireccion())}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-primary"
+                                                    onClick={buscarDireccion}
+                                                    disabled={buscandoDireccion || !busquedaDireccion.trim()}
+                                                >
+                                                    {buscandoDireccion
+                                                        ? <span className="spinner-border spinner-border-sm"></span>
+                                                        : <><i className="bi bi-search me-1"></i>Buscar</>
+                                                    }
+                                                </button>
+                                            </div>
+                                            <small className="text-muted">O haz clic directamente en el mapa</small>
+                                        </div>
 
                                         <div className="mb-3">
                                             <div className="d-flex gap-2 mb-2">
@@ -368,6 +505,7 @@ export default function Reportar() {
                                                         position={mapPosition}
                                                         onPositionChange={handlePositionChange}
                                                     />
+                                                    <MapController position={mapPosition} />
                                                 </MapContainer>
                                             </div>
                                         </div>
@@ -375,10 +513,15 @@ export default function Reportar() {
                                         <div className="mb-3">
                                             <label className="form-label">
                                                 <i className="bi bi-signpost me-1"></i> Dirección de referencia
+                                                {geocodificando && (
+                                                    <span className="spinner-border spinner-border-sm ms-2 text-primary"
+                                                          style={{ width: '12px', height: '12px' }}></span>
+                                                )}
                                             </label>
                                             <input type="text" name="direccion" className="form-control"
-                                                   placeholder="Ej: Calle 100 con Carrera 15, cerca al parque..."
+                                                   placeholder="Se completa automáticamente al seleccionar en el mapa"
                                                    value={form.direccion} onChange={handleChange} />
+                                            <small className="text-muted">Puedes editarla si es necesario</small>
                                         </div>
 
                                         <div className="d-flex justify-content-between mt-4">

@@ -1,23 +1,21 @@
 import { useState, useEffect } from 'react';
-import { geoService } from '../services/services';
+import { dashboardService } from '../services/services';
 import ReporteMap from '../components/ReporteMap';
 
 export default function Mapa() {
-    const [puntos, setPuntos] = useState([]);
+    const [todos, setTodos] = useState([]);
     const [filtro, setFiltro] = useState('');
     const [loading, setLoading] = useState(true);
-    const [showClusters, setShowClusters] = useState(false);
 
     useEffect(() => {
         setLoading(true);
-        const request = showClusters
-            ? geoService.clusters()
-            : geoService.heatmap(filtro || null);
-        request
-            .then(res => setPuntos(res.data))
-            .catch(() => setPuntos([]))
+        dashboardService.get()
+            .then(res => setTodos(res.data.reportes || []))
+            .catch(() => setTodos([]))
             .finally(() => setLoading(false));
-    }, [filtro, showClusters]);
+    }, []);
+
+    const puntos = filtro ? todos.filter(r => r.tipo === filtro) : todos;
 
     return (
         <div className="container-fluid px-3 mt-3 mb-4">
@@ -31,22 +29,18 @@ export default function Mapa() {
                         <div className="d-flex gap-2 flex-wrap">
                             <div className="btn-group">
                                 <button className={`btn btn-sm ${filtro === '' ? 'btn-primary' : 'btn-outline-primary'}`}
-                                        onClick={() => { setFiltro(''); setShowClusters(false); }}>
+                                        onClick={() => setFiltro('')}>
                                     <i className="bi bi-globe me-1"></i> Todos
                                 </button>
                                 <button className={`btn btn-sm ${filtro === 'PERDIDO' ? 'btn-danger' : 'btn-outline-danger'}`}
-                                        onClick={() => { setFiltro('PERDIDO'); setShowClusters(false); }}>
+                                        onClick={() => setFiltro('PERDIDO')}>
                                     <i className="bi bi-search-heart me-1"></i> Perdidos
                                 </button>
                                 <button className={`btn btn-sm ${filtro === 'ENCONTRADO' ? 'btn-success' : 'btn-outline-success'}`}
-                                        onClick={() => { setFiltro('ENCONTRADO'); setShowClusters(false); }}>
+                                        onClick={() => setFiltro('ENCONTRADO')}>
                                     <i className="bi bi-check-circle me-1"></i> Encontrados
                                 </button>
                             </div>
-                            <button className={`btn btn-sm ${showClusters ? 'btn-warning' : 'btn-outline-warning'}`}
-                                    onClick={() => setShowClusters(!showClusters)}>
-                                <i className="bi bi-bullseye me-1"></i> Clusters
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -64,7 +58,6 @@ export default function Mapa() {
                         <small className="text-muted">
                             <span className="text-danger">●</span> Perdido &nbsp;
                             <span className="text-success">●</span> Encontrado &nbsp;
-                            {showClusters && <><span className="text-warning">●</span> Cluster &nbsp;</>}
                         </small>
                         <small className="text-muted fw-bold">{puntos.length} reportes</small>
                     </div>

@@ -10,7 +10,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -141,9 +141,9 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       MAIL_HOST: mailhog
       MAIL_PORT: 1025
-      AUTO_VERIFY_EMAIL: "true"
+      AUTO_VERIFY_EMAIL: "false"
     ports:
-      - "8081:8081"
+      - "8091:8081"
     depends_on:
       postgres:
         condition: service_healthy
@@ -171,12 +171,13 @@ services:
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASS: ${RABBITMQ_PASS}
       MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_URL: http://localhost:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_BUCKET: ${MINIO_BUCKET}
       JWT_SECRET: ${JWT_SECRET}
     ports:
-      - "8082:8082"
+      - "8092:8082"
     depends_on:
       postgres:
         condition: service_healthy
@@ -208,7 +209,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
     ports:
-      - "8083:8083"
+      - "8093:8083"
     depends_on:
       postgres:
         condition: service_healthy
@@ -237,7 +238,7 @@ services:
       RABBITMQ_PASS: ${RABBITMQ_PASS}
       JWT_SECRET: ${JWT_SECRET}
     ports:
-      - "8084:8084"
+      - "8094:8084"
     depends_on:
       postgres:
         condition: service_healthy
@@ -279,7 +280,7 @@ services:
       ms-coincidencias:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 5
