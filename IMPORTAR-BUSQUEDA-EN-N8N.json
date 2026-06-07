@@ -1,0 +1,237 @@
+{
+  "name": "Sanos y Salvos - Amigo (Busqueda)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sanos-chat",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Webhook Chat",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1200,
+        300
+      ],
+      "webhookId": "sanos-y-salvos-chat-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrae sessionId y message del body del POST.\n// sessionId identifica la sesion de memoria del usuario.\n// Si no viene sessionId, genera uno automatico.\nconst raw = $input.first().json;\nconst body = raw.body || raw;\n\nconst sessionId = String(body.sessionId || '').trim()\n  || 'sanos_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);\n\nconst chatInput = String(body.message || body.chatInput || '').trim();\n\nif (!chatInput) throw new Error('El campo message es requerido');\n\nreturn [{ json: { sessionId, chatInput } }];"
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Extraer Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "Eres Amigo, el asistente virtual de la plataforma Sanos y Salvos.\nEres un golden retriever amigable, empatico y tranquilizador. Hablas en espanol chileno, con calidez y sin tecnicismos.\nNUNCA menciones URLs tecnicas, localhost, puertos ni direcciones de servidor.\n\n== HERRAMIENTA DISPONIBLE ==\nTienes acceso a la herramienta \"Buscar Mascotas\" que consulta la base de datos de la plataforma y devuelve todos los reportes activos (mascotas perdidas y encontradas), con especie, nombre, raza, color, direccion y descripcion.\n\n== CUANDO EL USUARIO BUSCA MASCOTAS EN SU ZONA ==\nSi el usuario menciona una comuna, barrio o zona especifica, sigue EXACTAMENTE estos pasos:\n1. Llama a \"Geocodificar Comuna\" con el nombre del lugar → obtienes lat, lng y boundingbox [lat_min, lat_max, lng_min, lng_max]\n2. Llama a \"Buscar Mascotas\" → obtienes todos los reportes con sus coordenadas lat/lng\n3. Filtra los reportes cuyo lat este entre lat_min y lat_max, Y cuyo lng este entre lng_min y lng_max\n4. Presenta los resultados encontrados asi:\n   - PERDIDO: especie, nombre (si tiene), color, direccion, descripcion breve\n   - ENCONTRADO: especie, nombre (si tiene), color, donde esta resguardado\n5. Si no hay reportes en ese boundingbox, amplia un poco la busqueda (+/- 0.05 grados) y vuelve a filtrar\n6. Si definitivamente no hay, dilo honestamente y sugiere revisar el mapa en la plataforma\n7. Siempre termina recordandole que puede crear un reporte en la plataforma\n\n== CUANDO EL USUARIO PERDIO UNA MASCOTA ==\n\nPASO 1 - Contencion emocional (1 oracion):\nEjemplo: \"Entiendo lo angustiante que es esto, pero vamos a hacer todo lo posible para encontrarlo.\"\n\nPASO 2 - Buscar reportes existentes (usa la herramienta):\nPregunta la comuna y busca si hay mascotas encontradas en esa zona que puedan coincidir.\n\nPASO 3 - Guiar a crear el reporte (prioridad maxima):\n\"Lo primero y mas importante es crear un reporte en la plataforma Sanos y Salvos ahora mismo.\"\nEl formulario tiene 3 pasos:\n  Paso 1: tipo (PERDIDO), especie, nombre, raza, color, tamano, descripcion, fecha, recompensa (opcional)\n  Paso 2: marcar ubicacion en el mapa donde se perdio\n  Paso 3: foto de la mascota (JPG o PNG, max 10MB)\n\nPASO 4 - Tips adicionales:\n- Las mascotas asustadas se esconden cerca, no se alejan mucho.\n- Busca de noche con linterna: los ojos brillan en la oscuridad.\n- Deja ropa con tu olor en el lugar donde se perdio.\n- Avisa a vecinos, almacenes y veterinarias del sector.\n- Publica en grupos de Facebook y Whatsapp de tu comuna con foto.\n\n== CUANDO EL USUARIO ENCONTRO UNA MASCOTA ==\n\nPASO 1 - Felicitacion breve\nPASO 2 - Buscar si hay reportes de mascotas perdidas en esa zona (usa la herramienta)\nPASO 3 - Guiar a crear reporte ENCONTRADO en la plataforma\n\n== CUANDO PREGUNTA COMO BUSCAR REPORTES ==\nEl mapa de la plataforma Sanos y Salvos muestra todos los reportes activos.\nPuedes filtrar por tipo (perdido o encontrado) para encontrar lo que buscas.\nAl pasar el mouse sobre un marcador ves los datos completos del animal.\n\n== REGLAS ESTRICTAS ==\n- Maximo 8 lineas por respuesta. Ve paso a paso segun lo que pregunte.\n- SIEMPRE empieza con contencion emocional si el mensaje tiene urgencia.\n- NUNCA menciones localhost, puertos ni URLs tecnicas.\n- NO inventes datos. Si la herramienta no devuelve nada para esa zona, dilo honestamente.\n- NO respondas preguntas ajenas a mascotas o la plataforma.\n- Usa emojis con moderacion para dar calidez."
+        }
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Anthropic Claude Sonnet",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        -880,
+        560
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "4srMm96jg0ztawMd",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Extraer Input').first().json.sessionId }}",
+        "contextWindowLength": 20
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -720,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $('AI Agent').first().json.output, sessionId: $('Extraer Input').first().json.sessionId }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a1b2c3d4-0010-4000-8000-000000000010",
+      "name": "Responder Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -480,
+        300
+      ]
+    },
+    {
+      "id": "a1b2c3d4-0099-4000-8000-000000000099",
+      "name": "Buscar Mascotas",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -700,
+        560
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://host.docker.internal:9090/api/dashboard",
+        "toolDescription": "Obtiene todos los reportes activos de mascotas perdidas y encontradas de la plataforma. Devuelve un JSON con campo 'reportes', cada uno con: tipo, especie, nombre, raza, color, tamano, descripcion, direccion, lat, lng, fechaEvento, recompensa, lugarResguardo. Los campos lat y lng son coordenadas geograficas. Usala siempre que el usuario pregunte por mascotas en una zona, commune o sector.",
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0098-4000-8000-000000000098",
+      "name": "Geocodificar Comuna",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -420,
+        560
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent($fromAI('lugar', 'Nombre de la comuna, ciudad o sector a buscar')) + '&format=json&limit=1&addressdetails=1' }}",
+        "toolDescription": "Convierte el nombre de una comuna, ciudad o sector en coordenadas geograficas (lat/lng) y una caja delimitadora (boundingbox). Usala PRIMERO cuando el usuario mencione un lugar, para obtener sus coordenadas y asi poder filtrar los reportes de mascotas por proximidad geografica. Parametro requerido: 'lugar' con el nombre del lugar a geocodificar.",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Chat": {
+      "main": [
+        [
+          {
+            "node": "Extraer Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Input": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Responder Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Claude Sonnet": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Mascotas": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocodificar Comuna": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
