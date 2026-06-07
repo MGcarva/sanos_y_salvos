@@ -5,56 +5,45 @@
 $SANOS_DIR = $PSScriptRoot
 $N8N_DIR   = Join-Path $PSScriptRoot "..\..\n8n"
 
-function Write-Title($msg) {
-    Write-Host ""
-    Write-Host "  $msg" -ForegroundColor Cyan
-    Write-Host "  $('=' * ($msg.Length))" -ForegroundColor DarkCyan
-}
-
-function Write-Ok($msg)   { Write-Host "  [OK] $msg" -ForegroundColor Green  }
-function Write-Info($msg) { Write-Host "  [..] $msg" -ForegroundColor Yellow }
-function Write-Err($msg)  { Write-Host "  [!!] $msg" -ForegroundColor Red    }
-
 Clear-Host
 Write-Host ""
 Write-Host "  ==========================================" -ForegroundColor Cyan
-Write-Host "         SANOS Y SALVOS - INICIANDO         " -ForegroundColor White
+Write-Host "       SANOS Y SALVOS - INICIANDO           " -ForegroundColor White
 Write-Host "  ==========================================" -ForegroundColor Cyan
 
-# ── 1. Sanos y Salvos ────────────────────────────────────────
-Write-Title "Levantando plataforma Sanos y Salvos..."
-Write-Info "Directorio: $SANOS_DIR"
+# ── 1. Sanos y Salvos ─────────────────────────────────────────
+Write-Host ""
+Write-Host "  [1/2] Levantando plataforma Sanos y Salvos..." -ForegroundColor Yellow
 
 Push-Location $SANOS_DIR
-$result = docker compose up -d 2>&1
+docker compose up -d 2>&1 | Out-Null
 if ($LASTEXITCODE -eq 0) {
-    Write-Ok "Servicios Sanos y Salvos iniciados"
+    Write-Host "  [OK]  Servicios Sanos y Salvos iniciados" -ForegroundColor Green
 } else {
-    Write-Err "Error al iniciar Sanos y Salvos:"
-    Write-Host $result -ForegroundColor DarkRed
+    Write-Host "  [ERR] Error al iniciar Sanos y Salvos" -ForegroundColor Red
 }
 Pop-Location
 
-# ── 2. n8n ───────────────────────────────────────────────────
-Write-Title "Levantando n8n (Agente Amigo)..."
-Write-Info "Directorio: $N8N_DIR"
+# ── 2. n8n ────────────────────────────────────────────────────
+Write-Host ""
+Write-Host "  [2/2] Levantando n8n (Agente Amigo)..." -ForegroundColor Yellow
 
 if (Test-Path $N8N_DIR) {
     Push-Location $N8N_DIR
-    $result = docker compose up -d 2>&1
+    docker compose up -d 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
-        Write-Ok "n8n iniciado"
+        Write-Host "  [OK]  n8n iniciado" -ForegroundColor Green
     } else {
-        Write-Err "Error al iniciar n8n:"
-        Write-Host $result -ForegroundColor DarkRed
+        Write-Host "  [ERR] Error al iniciar n8n" -ForegroundColor Red
     }
     Pop-Location
 } else {
-    Write-Err "No se encontro el directorio n8n en: $N8N_DIR"
+    Write-Host "  [ERR] No se encontro directorio n8n: $N8N_DIR" -ForegroundColor Red
 }
 
-# ── 3. Esperar y mostrar estado ───────────────────────────────
-Write-Title "Esperando que los servicios esten listos..."
+# ── 3. Esperar y mostrar estado ────────────────────────────────
+Write-Host ""
+Write-Host "  Esperando que los servicios esten listos (5s)..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
 
 $contenedores = @(
@@ -79,18 +68,18 @@ Write-Host ""
 foreach ($c in $contenedores) {
     $estado = docker inspect --format "{{.State.Status}}" $c 2>$null
     if ($estado -eq "running") {
-        Write-Host "  [✓] $c" -ForegroundColor Green
+        Write-Host "  [OK] $c" -ForegroundColor Green
     } elseif ($estado) {
-        Write-Host "  [~] $c ($estado)" -ForegroundColor Yellow
+        Write-Host "  [~~] $c ($estado)" -ForegroundColor Yellow
     } else {
-        Write-Host "  [x] $c (no encontrado)" -ForegroundColor DarkGray
+        Write-Host "  [--] $c (no encontrado)" -ForegroundColor DarkGray
     }
 }
 
-# ── 4. URLs de acceso ─────────────────────────────────────────
+# ── 4. URLs ────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "  ==========================================" -ForegroundColor Cyan
-Write-Host "   SISTEMA LISTO - URLs de acceso:" -ForegroundColor White
+Write-Host "   SISTEMA LISTO - URLs de acceso:          " -ForegroundColor White
 Write-Host "  ==========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Plataforma        ->  http://localhost:3000" -ForegroundColor White
