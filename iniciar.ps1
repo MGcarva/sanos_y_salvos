@@ -16,7 +16,7 @@ Write-Host ""
 Write-Host "  [1/2] Levantando plataforma Sanos y Salvos..." -ForegroundColor Yellow
 
 Push-Location $SANOS_DIR
-docker compose up -d 2>&1 | Out-Null
+docker compose up -d
 if ($LASTEXITCODE -eq 0) {
     Write-Host "  [OK]  Servicios Sanos y Salvos iniciados" -ForegroundColor Green
 } else {
@@ -30,7 +30,7 @@ Write-Host "  [2/2] Levantando n8n (Agente Amigo)..." -ForegroundColor Yellow
 
 if (Test-Path $N8N_DIR) {
     Push-Location $N8N_DIR
-    docker compose up -d 2>&1 | Out-Null
+    docker compose up -d
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  [OK]  n8n iniciado" -ForegroundColor Green
     } else {
