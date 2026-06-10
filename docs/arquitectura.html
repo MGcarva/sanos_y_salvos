@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Arquitectura de Microservicios — Sanos y Salvos</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 1100px; margin: 0 auto; padding: 20px; background: #fff; }
+  h1 { color: #1a237e; border-bottom: 3px solid #1a237e; padding-bottom: 8px; }
+  h2 { color: #283593; margin-top: 30px; }
+  .diagram-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 20px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+  th { background: #1a237e; color: white; padding: 10px; text-align: left; }
+  td { padding: 8px 10px; border-bottom: 1px solid #dee2e6; }
+  tr:nth-child(even) { background: #f8f9fa; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+  .badge-java { background: #fff3e0; color: #e65100; }
+  .badge-react { background: #e3f2fd; color: #0d47a1; }
+  .badge-db { background: #e8f5e9; color: #1b5e20; }
+  .print-btn { background: #1a237e; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-bottom: 20px; }
+  @media print { .print-btn { display: none; } }
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">Exportar a PDF (Ctrl+P)</button>
+
+<h1>Diagrama de Arquitectura de Microservicios<br><small style="font-size:0.6em;color:#555">Sanos y Salvos — DSY1106 Desarrollo Fullstack III — EP3</small></h1>
+
+<h2>1. Arquitectura general</h2>
+<div class="diagram-box">
+<div class="mermaid">
+graph TB
+    subgraph CLIENTE["Cliente"]
+        USER["👤 Usuario"]
+        CHAT["💬 Chat Widget\n(Agente Amigo)"]
+    end
+
+    subgraph FRONTEND["Frontend — React + Vite :3000"]
+        UI["React SPA\nBootstrap 5 + React-Leaflet"]
+    end
+
+    subgraph BFF["BFF Service — Spring Boot :9090"]
+        BFFAPI["API Gateway\nJWT Filter + Circuit Breaker"]
+        REDIS_CACHE["Redis Cache\n(dashboard 5 min TTL)"]
+    end
+
+    subgraph MICROSERVICIOS["Microservicios"]
+        AUTH["auth-service\n:8081\nJWT + BCrypt"]
+        MASCOTAS["ms-mascotas\n:8082\nFactory Method"]
+        GEO["ms-geolocalizacion\n:8083\nPostGIS + K-means"]
+        COINC["ms-coincidencias\n:8084\nFuzzyWuzzy Score"]
+    end
+
+    subgraph INFRAESTRUCTURA["Infraestructura"]
+        PG[("PostgreSQL\n+ PostGIS")]
+        REDIS[("Redis")]
+        MQ["RabbitMQ\nMensajería"]
+        MINIO["MinIO\nFotos S3"]
+        MAIL["Mailhog\nEmail dev"]
+    end
+
+    subgraph N8N["Agente IA — n8n :5678"]
+        AGENT["Agente Amigo\nClaude Sonnet"]
+        NOMINATIM["Nominatim API\nGeocoding"]
+    end
+
+    USER --> UI
+    CHAT --> AGENT
+    UI --> BFF
+    BFFAPI --> REDIS_CACHE
+    BFFAPI --> AUTH
+    BFFAPI --> MASCOTAS
+    BFFAPI --> GEO
+    BFFAPI --> COINC
+    AUTH --> PG
+    AUTH --> REDIS
+    AUTH --> MAIL
+    MASCOTAS --> PG
+    MASCOTAS --> MINIO
+    MASCOTAS --> MQ
+    GEO --> PG
+    GEO --> MQ
+    COINC --> PG
+    COINC --> MQ
+    AGENT --> BFF
+    AGENT --> NOMINATIM
+
+    style CLIENTE fill:#e8eaf6,stroke:#3f51b5
+    style FRONTEND fill:#e3f2fd,stroke:#1565c0
+    style BFF fill:#fff3e0,stroke:#e65100
+    style MICROSERVICIOS fill:#e8f5e9,stroke:#2e7d32
+    style INFRAESTRUCTURA fill:#fce4ec,stroke:#c62828
+    style N8N fill:#f3e5f5,stroke:#6a1b9a
+</div>
+</div>
+
+<h2>2. Flujo de creación de un reporte</h2>
+<div class="diagram-box">
+<div class="mermaid">
+sequenceDiagram
+    actor U as Usuario
+    participant FE as Frontend :3000
+    participant BFF as BFF :9090
+    participant MS as ms-mascotas :8082
+    participant MQ as RabbitMQ
+    participant GEO as ms-geolocalizacion :8083
+    participant COINC as ms-coincidencias :8084
+    participant DB as PostgreSQL
+    participant S3 as MinIO
+
+    U->>FE: Completa formulario + foto
+    FE->>BFF: POST /api/reportes (multipart)
+    BFF->>MS: Reenvía datos + foto
+    MS->>S3: Sube foto → URL pública
+    MS->>DB: INSERT reporte (JPA)
+    MS->>MQ: Publica evento "reporte.nuevo"
+    BFF->>BFF: Invalida caché Redis
+    BFF-->>FE: 201 Created + datos reporte
+    FE-->>U: Muestra confirmación
+
+    MQ-->>GEO: Consume "reporte.nuevo"
+    GEO->>DB: INSERT punto geoespacial (PostGIS)
+    GEO->>MQ: Publica "geo.completado"
+
+    MQ-->>COINC: Consume "geo.completado"
+    COINC->>DB: Calcula coincidencias (score)
+    COINC->>DB: INSERT coincidencias
+</div>
+</div>
+
+<h2>3. Componentes y tecnologías</h2>
+<table>
+  <tr><th>Componente</th><th>Tecnología</th><th>Puerto</th><th>Función</th></tr>
+  <tr><td>Frontend</td><td><span class="badge badge-react">React 18 + Vite</span></td><td>:3000</td><td>SPA con mapa, formulario de reporte, chat</td></tr>
+  <tr><td>BFF Service</td><td><span class="badge badge-java">Spring Boot 3.2</span></td><td>:9090</td><td>API Gateway, JWT, Circuit Breaker, caché Redis</td></tr>
+  <tr><td>auth-service</td><td><span class="badge badge-java">Spring Boot 3.2</span></td><td>:8081</td><td>Registro, login, JWT, rate limiting</td></tr>
+  <tr><td>ms-mascotas</td><td><span class="badge badge-java">Spring Boot 3.2</span></td><td>:8082</td><td>CRUD reportes, patrón Factory Method</td></tr>
+  <tr><td>ms-geolocalizacion</td><td><span class="badge badge-java">Spring Boot 3.2</span></td><td>:8083</td><td>PostGIS, heatmap, clusters K-means</td></tr>
+  <tr><td>ms-coincidencias</td><td><span class="badge badge-java">Spring Boot 3.2</span></td><td>:8084</td><td>Scoring FuzzyWuzzy, matching automático</td></tr>
+  <tr><td>PostgreSQL + PostGIS</td><td><span class="badge badge-db">PostgreSQL 15</span></td><td>:5432</td><td>Persistencia principal + consultas geoespaciales</td></tr>
+  <tr><td>Redis</td><td><span class="badge badge-db">Redis 7</span></td><td>:6379</td><td>Caché dashboard y sesiones</td></tr>
+  <tr><td>RabbitMQ</td><td><span class="badge badge-db">RabbitMQ 3</span></td><td>:5672</td><td>Mensajería asíncrona entre microservicios</td></tr>
+  <tr><td>MinIO</td><td><span class="badge badge-db">MinIO</span></td><td>:9000</td><td>Almacenamiento fotos (S3-compatible)</td></tr>
+  <tr><td>Agente n8n</td><td><span class="badge badge-react">n8n + Claude</span></td><td>:5678</td><td>Asistente IA para búsqueda por comuna</td></tr>
+</table>
+
+<h2>4. Patrones de diseño aplicados</h2>
+<table>
+  <tr><th>Patrón</th><th>Dónde</th><th>Descripción</th></tr>
+  <tr><td>Factory Method</td><td>ms-mascotas</td><td>ReporteFactory crea ReportePerdido o ReporteEncontrado según el tipo</td></tr>
+  <tr><td>Observer</td><td>RabbitMQ</td><td>ms-mascotas publica eventos; geo y coincidencias los consumen</td></tr>
+  <tr><td>Strategy</td><td>ms-coincidencias</td><td>ScoringService implementa estrategia de scoring multi-criterio</td></tr>
+  <tr><td>Strategy</td><td>ms-geolocalizacion</td><td>ClusteringService implementa K-means como estrategia de agrupamiento</td></tr>
+  <tr><td>Proxy / BFF</td><td>bff-service</td><td>Backend For Frontend centraliza acceso del frontend a todos los servicios</td></tr>
+  <tr><td>Circuit Breaker</td><td>bff-service</td><td>Resilience4j evita cascada de fallos si un microservicio no responde</td></tr>
+</table>
+
+<script>mermaid.initialize({ startOnLoad: true, theme: 'default' });</script>
+</body>
+</html>

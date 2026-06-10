@@ -1,6 +1,6 @@
 REPOSITORIOS DEL PROYECTO — SANOS Y SALVOS
 ==========================================
-Evaluación Parcial N°2 — DSY1106 Desarrollo Fullstack III
+Evaluación Parcial N°3 — DSY1106 Desarrollo Fullstack III
 
 REPOSITORIO PRINCIPAL
 ─────────────────────
@@ -79,9 +79,21 @@ Descripción: Arquetipo Maven personalizado para generar nuevos microservicios
 DOCUMENTACIÓN
 ─────────────
 Directorio: /docs
-  - PATRONES_DISEÑO.md   → Análisis completo de patrones de diseño y arquetipos
-  - PLAN_BRANCHING.md    → Estrategia Git Flow con evidencia de merges y ramas
-  - (convertir a PDF para entrega final)
+  - PATRONES_DISEÑO.md              → Análisis completo de patrones de diseño y arquetipos
+  - PLAN_BRANCHING.md               → Estrategia Git Flow con evidencia de merges y ramas
+  - INFORME_PRUEBAS_UNITARIAS.md    → Informe de 100 pruebas unitarias (JUnit 5 + Vitest)
+  - DESCRIPCION_PERSISTENCIA.md     → Descripción de la persistencia: JPA, PostGIS, Redis, MinIO
+  - arquitectura.html               → Diagrama de arquitectura de microservicios (abrir en navegador, imprimir a PDF)
+  - sanos-y-salvos-api.postman_collection.json → Colección Postman con todos los endpoints del BFF
+  - (convertir .md a PDF para entrega final)
+
+RAMA DE PRUEBAS UNITARIAS
+──────────────────────────
+Rama Git: pruebas-unitarias
+URL: https://github.com/mgcarva/sanos_y_salvos/tree/pruebas-unitarias
+Descripción: Rama creada para EP3. Contiene correcciones de tests unitarios,
+  informe de pruebas, documentación de persistencia, diagrama de arquitectura
+  y colección Postman. No modifica código de producción.
 
 INFRAESTRUCTURA
 ───────────────
