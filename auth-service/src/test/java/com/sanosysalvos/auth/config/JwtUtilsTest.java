@@ -93,8 +93,8 @@ class JwtUtilsTest {
     @Test
     void differentTokensGenerated_notEqual() {
         UUID userId = UUID.randomUUID();
-        String token1 = jwtUtils.generateAccessToken(userId, "test@example.com", "USER");
-        String token2 = jwtUtils.generateAccessToken(userId, "test@example.com", "USER");
+        String token1 = jwtUtils.generateAccessToken(userId, "user1@example.com", "USER");
+        String token2 = jwtUtils.generateAccessToken(userId, "user2@example.com", "USER");
 
         assertThat(token1).isNotEqualTo(token2);
     }

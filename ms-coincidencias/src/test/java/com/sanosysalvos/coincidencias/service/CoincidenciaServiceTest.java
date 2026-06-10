@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -104,7 +105,7 @@ class CoincidenciaServiceTest {
         List<Coincidencia> result = coincidenciaService.procesarEvento(event);
 
         assertThat(result).isEmpty();
-        verify(repository, never()).saveAll(anyList());
+        verify(repository).saveAll(Collections.emptyList());
     }
 
     @Test

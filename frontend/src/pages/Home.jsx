@@ -61,7 +61,7 @@ export default function Home() {
                                     <div className="d-flex gap-3 flex-wrap">
                                         {user ? (
                                             <>
-                                                <Link to="/reportar" className="btn btn-light btn-lg fw-bold px-4">
+                                                <Link to="/reportar" className="btn btn-light btn-lg fw-bold px-4 btn-pulse">
                                                     <i className="bi bi-plus-circle me-2"></i>Crear Reporte
                                                 </Link>
                                                 <Link to="/mapa" className="btn btn-outline-light btn-lg px-4">
