@@ -12,3 +12,26 @@ tfplan
 .terraform.lock.hcl
 backend-config.json
 *.pem
+
+# Build artifacts
+frontend/node_modules/
+frontend/dist/
+*/target/
+
+# Archivos de debug y temporales
+exec*.json
+wf*.json
+wfs*.json
+put_result.json
+debug_*.js
+nuevo-codigo-*.js
+fix-n8n-workflow.ps1
+setup-amigo.ps1
+copiar-codigo-geocoding.ps1
+fix_n8n_workflow.py
+update_n8n_workflow.py
+actualizar-*.py
+tool_buscar_reportes.txt
+n8n-workflow-amigo.json.backup*
+entregable/
+presentacion.html

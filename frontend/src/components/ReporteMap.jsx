@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Tooltip, Popup } from 'react-leaflet';
 import { Link } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -37,25 +37,56 @@ export default function ReporteMap({ reportes = [], center = [-33.6883, -71.2133
                         position={[reporte.lat, reporte.lng]}
                         icon={reporte.tipo === 'PERDIDO' ? perdidoIcon : encontradoIcon}
                     >
+                        <Tooltip direction="top" offset={[0, -36]} opacity={1}>
+                            <div style={{ minWidth: '180px', maxWidth: '230px' }}>
+                                {reporte.fotoUrl && (
+                                    <img
+                                        src={reporte.fotoUrl}
+                                        alt="foto"
+                                        style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '5px', marginBottom: '5px' }}
+                                    />
+                                )}
+                                <div style={{ fontWeight: 700, color: reporte.tipo === 'PERDIDO' ? '#dc3545' : '#198754' }}>
+                                    {reporte.tipo === 'PERDIDO' ? '🔴 PERDIDO' : '🟢 ENCONTRADO'}
+                                </div>
+                                <div style={{ fontWeight: 600 }}>
+                                    {reporte.especie || ''}
+                                    {reporte.raza ? ` · ${reporte.raza}` : ''}
+                                    {reporte.tamano ? ` (${reporte.tamano.toLowerCase()})` : ''}
+                                </div>
+                                {reporte.nombre && <div>🐾 <b>{reporte.nombre}</b></div>}
+                                {reporte.color && <div><small>Color: {reporte.color}</small></div>}
+                                {reporte.direccion && <div><small>📍 {reporte.direccion}</small></div>}
+                                {reporte.fechaEvento && (
+                                    <div><small>📅 {new Date(reporte.fechaEvento).toLocaleDateString('es-CL')}</small></div>
+                                )}
+                                {reporte.tipo === 'PERDIDO' && reporte.recompensa > 0 && (
+                                    <div><small>💰 Recompensa: ${Number(reporte.recompensa).toLocaleString('es-CL')}</small></div>
+                                )}
+                                {reporte.tipo === 'ENCONTRADO' && reporte.lugarResguardo && (
+                                    <div><small>🏠 {reporte.lugarResguardo}</small></div>
+                                )}
+                                {reporte.descripcion && (
+                                    <div><small style={{ color: '#555' }}>
+                                        {reporte.descripcion.length > 70 ? reporte.descripcion.substring(0, 70) + '…' : reporte.descripcion}
+                                    </small></div>
+                                )}
+                                {id && <div style={{ marginTop: '4px', color: '#0d6efd', fontSize: '0.8rem' }}>Haz clic para ver contacto →</div>}
+                            </div>
+                        </Tooltip>
                         <Popup>
-                            <div style={{ minWidth: '160px' }}>
-                                <strong className={reporte.tipo === 'PERDIDO' ? 'text-danger' : 'text-success'}>
-                                    {reporte.tipo === 'PERDIDO' ? '🔴' : '🟢'} {reporte.tipo}
+                            <div style={{ minWidth: '180px' }}>
+                                <strong style={{ color: reporte.tipo === 'PERDIDO' ? '#dc3545' : '#198754' }}>
+                                    {reporte.tipo === 'PERDIDO' ? '🔴 PERDIDO' : '🟢 ENCONTRADO'}
                                 </strong>
-                                <br />
-                                <span style={{ fontSize: '1.05em', fontWeight: 600 }}>
-                                    {reporte.especie} {reporte.raza ? `- ${reporte.raza}` : ''}
-                                </span>
-                                <br />
-                                {reporte.nombre && <><small>Nombre: {reporte.nombre}</small><br /></>}
-                                {reporte.color && <><small>Color: {reporte.color}</small><br /></>}
-                                {reporte.direccion && <small>📍 {reporte.direccion}</small>}
-                                {clickable && id && (
-                                    <div style={{ marginTop: '6px' }}>
-                                        <Link to={`/reporte/${id}`}
-                                              className="btn btn-primary btn-sm w-100"
-                                              style={{ fontSize: '0.75rem' }}>
-                                            Ver detalle →
+                                <div style={{ fontWeight: 600 }}>
+                                    {reporte.especie}{reporte.raza ? ` · ${reporte.raza}` : ''}
+                                </div>
+                                {reporte.nombre && <div>🐾 <b>{reporte.nombre}</b></div>}
+                                {id && (
+                                    <div style={{ marginTop: '8px' }}>
+                                        <Link to={`/reporte/${id}`} className="btn btn-primary btn-sm w-100" style={{ fontSize: '0.78rem' }}>
+                                            Ver contacto y detalle →
                                         </Link>
                                     </div>
                                 )}

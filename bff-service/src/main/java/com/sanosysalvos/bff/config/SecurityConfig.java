@@ -32,10 +32,10 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/reportes/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/coincidencias/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/geo/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/dashboard/**").permitAll()
+                        .requestMatchers("/api/reportes/**").permitAll()
+                        .requestMatchers("/api/coincidencias/**").permitAll()
+                        .requestMatchers("/api/geo/**").permitAll()
+                        .requestMatchers("/api/dashboard/**").permitAll()
                         .requestMatchers(
                                 "/actuator/**",
                                 "/api/actuator/**",

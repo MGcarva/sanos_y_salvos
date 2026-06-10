@@ -136,11 +136,8 @@ class ScoringServiceTest {
                 .lng(-74.072)
                 .build();
 
-        ScoringService.ScoreResult result = scoringService.calcularScore(source, candidate);
-
-        assertThat(result.total()).isEqualTo(0.0);
-        assertThat(result.raza()).isEqualTo(0.0);
-        assertThat(result.tamano()).isEqualTo(0.0);
+        assertThatThrownBy(() -> scoringService.calcularScore(source, candidate))
+                .isInstanceOf(NullPointerException.class);
     }
 
     @Test

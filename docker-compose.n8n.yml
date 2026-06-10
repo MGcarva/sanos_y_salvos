@@ -1,0 +1,75 @@
+# ============================================================
+# docker-compose.n8n.yml
+# Agrega n8n al stack de Sanos y Salvos en local.
+#
+# CÓMO USARLO:
+# En vez de levantar solo con "docker compose up", usa:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.n8n.yml up -d
+#
+# Esto fusiona ambos archivos. n8n se une a sanos-network,
+# por lo que puede llamar a bff-service por nombre de contenedor.
+#
+# ACCESO:
+#   n8n UI:      http://localhost:5678
+#   Webhook URL: http://localhost:5678/webhook/sanos-chat
+# ============================================================
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: sanos-n8n
+    restart: unless-stopped
+    ports:
+      # Puerto 5678 expuesto en tu máquina local.
+      # El navegador lo usa para abrir la UI y para que
+      # ChatWidget.jsx llame al webhook desde el navegador.
+      - "5678:5678"
+    environment:
+      # URL base que n8n usa para construir los links de webhooks.
+      # Como accedemos desde el navegador en localhost, va así.
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+
+      # Deshabilita el aviso de configuración de usuario en primera vez.
+      # Útil para desarrollo local.
+      - N8N_BASIC_AUTH_ACTIVE=false
+
+      # Zona horaria para que los logs y ejecuciones usen hora de Chile.
+      - GENERIC_TIMEZONE=America/Santiago
+      - TZ=America/Santiago
+
+      # Carpeta donde n8n guarda sus datos (workflows, credenciales, etc.)
+      # Se persiste en el volumen n8n_data para que no pierdas nada
+      # al reiniciar el contenedor.
+      - N8N_USER_FOLDER=/home/node/.n8n
+
+    volumes:
+      # Volumen persistente: guarda workflows, credenciales y ejecuciones.
+      # Sin esto, cada vez que reinicies Docker pierdes todo.
+      - n8n_data:/home/node/.n8n
+
+    networks:
+      # Se une a la misma red que todos los microservicios de Sanos y Salvos.
+      # Esto permite que dentro del workflow uses:
+      #   http://bff-service:8080   en vez de   http://localhost:8080
+      # porque Docker resuelve "bff-service" como el hostname del contenedor.
+      - sanos-network
+
+    # n8n esperará a que el BFF esté saludable antes de arrancar.
+    # Así evitas errores en las primeras ejecuciones si el BFF tarda.
+    depends_on:
+      bff-service:
+        condition: service_healthy
+
+# El volumen debe declararse aquí para que docker compose lo gestione.
+volumes:
+  n8n_data:
+    driver: local
+
+# Referenciamos la red que se crea en docker-compose.yml.
+# Al fusionar ambos archivos, n8n se une a la misma red.
+networks:
+  sanos-network:

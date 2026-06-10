@@ -66,6 +66,26 @@ public class ReporteService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Búsqueda avanzada por características de la mascota
+     */
+    public List<ReporteResponseDTO> buscarPorCaracteristicas(
+            String tipo,
+            String especie,
+            String raza,
+            String color,
+            String nombre,
+            Reporte.Tamano tamano,
+            String direccion) {
+        log.info("Buscando reportes - tipo: {}, especie: {}, raza: {}, color: {}, nombre: {}, tamano: {}, direccion: {}",
+                tipo, especie, raza, color, nombre, tamano, direccion);
+
+        return reporteRepository.buscarPorCaracteristicas(tipo, especie, raza, color, nombre, tamano, direccion)
+                .stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public ReporteResponseDTO actualizarEstado(UUID id, Reporte.EstadoReporte estado) {
         Reporte reporte = reporteRepository.findById(id)

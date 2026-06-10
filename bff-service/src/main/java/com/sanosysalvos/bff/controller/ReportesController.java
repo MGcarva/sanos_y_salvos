@@ -59,4 +59,16 @@ public class ReportesController {
         dashboardService.invalidateCache();
         return response;
     }
+
+    @GetMapping("/buscar")
+    public ResponseEntity<List> buscarPorCaracteristicas(
+            @RequestParam(required = false) String tipo,
+            @RequestParam(required = false) String especie,
+            @RequestParam(required = false) String raza,
+            @RequestParam(required = false) String color,
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = false) String tamano,
+            @RequestParam(required = false) String direccion) {
+        return mascotasProxy.buscarPorCaracteristicas(tipo, especie, raza, color, nombre, tamano, direccion);
+    }
 }
