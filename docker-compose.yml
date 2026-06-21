@@ -154,7 +154,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 300s
     networks:
       - sanos-network
 
@@ -190,7 +190,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 300s
     networks:
       - sanos-network
 
@@ -220,7 +220,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 300s
     networks:
       - sanos-network
 
@@ -249,7 +249,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 300s
     networks:
       - sanos-network
 
@@ -284,7 +284,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 300s
     networks:
       - sanos-network
 

@@ -41,11 +41,6 @@ services:
       - GENERIC_TIMEZONE=America/Santiago
       - TZ=America/Santiago
 
-      # Carpeta donde n8n guarda sus datos (workflows, credenciales, etc.)
-      # Se persiste en el volumen n8n_data para que no pierdas nada
-      # al reiniciar el contenedor.
-      - N8N_USER_FOLDER=/home/node/.n8n
-
     volumes:
       # Volumen persistente: guarda workflows, credenciales y ejecuciones.
       # Sin esto, cada vez que reinicies Docker pierdes todo.

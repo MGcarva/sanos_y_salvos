@@ -3,7 +3,6 @@
 # ============================================================
 
 $SANOS_DIR = $PSScriptRoot
-$N8N_DIR   = Join-Path $PSScriptRoot "..\..\n8n"
 
 Clear-Host
 Write-Host ""
@@ -11,37 +10,20 @@ Write-Host "  ==========================================" -ForegroundColor Cyan
 Write-Host "       SANOS Y SALVOS - INICIANDO           " -ForegroundColor White
 Write-Host "  ==========================================" -ForegroundColor Cyan
 
-# ── 1. Sanos y Salvos ─────────────────────────────────────────
+# ── 1. Levantar todo (plataforma + n8n) ───────────────────────
 Write-Host ""
-Write-Host "  [1/2] Levantando plataforma Sanos y Salvos..." -ForegroundColor Yellow
+Write-Host "  [1/1] Levantando plataforma + Agente Amigo (n8n)..." -ForegroundColor Yellow
 
 Push-Location $SANOS_DIR
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.n8n.yml up -d
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "  [OK]  Servicios Sanos y Salvos iniciados" -ForegroundColor Green
+    Write-Host "  [OK]  Todos los servicios iniciados" -ForegroundColor Green
 } else {
-    Write-Host "  [ERR] Error al iniciar Sanos y Salvos" -ForegroundColor Red
+    Write-Host "  [ERR] Error al iniciar los servicios" -ForegroundColor Red
 }
 Pop-Location
 
-# ── 2. n8n ────────────────────────────────────────────────────
-Write-Host ""
-Write-Host "  [2/2] Levantando n8n (Agente Amigo)..." -ForegroundColor Yellow
-
-if (Test-Path $N8N_DIR) {
-    Push-Location $N8N_DIR
-    docker compose up -d
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "  [OK]  n8n iniciado" -ForegroundColor Green
-    } else {
-        Write-Host "  [ERR] Error al iniciar n8n" -ForegroundColor Red
-    }
-    Pop-Location
-} else {
-    Write-Host "  [ERR] No se encontro directorio n8n: $N8N_DIR" -ForegroundColor Red
-}
-
-# ── 3. Esperar y mostrar estado ────────────────────────────────
+# ── 2. Esperar y mostrar estado ────────────────────────────────
 Write-Host ""
 Write-Host "  Esperando que los servicios esten listos (5s)..." -ForegroundColor Yellow
 Start-Sleep -Seconds 5
@@ -58,7 +40,7 @@ $contenedores = @(
     "sanos-rabbitmq",
     "sanos-minio",
     "sanos-mailhog",
-    "trato_hecho_n8n"
+    "sanos-n8n"
 )
 
 Write-Host ""
@@ -76,7 +58,7 @@ foreach ($c in $contenedores) {
     }
 }
 
-# ── 4. URLs ────────────────────────────────────────────────────
+# ── 3. URLs ────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "  ==========================================" -ForegroundColor Cyan
 Write-Host "   SISTEMA LISTO - URLs de acceso:          " -ForegroundColor White
