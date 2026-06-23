@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>PLAN_BRANCHING.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> or <div class="page"></div> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="plan-de-branching--sanos-y-salvos">Plan de Branching — Sanos y Salvos</h1>
+<h2 id="1-estrategia-adoptada-git-flow-adaptado">1. Estrategia adoptada: Git Flow adaptado</h2>
+<p>El proyecto utiliza una estrategia basada en <strong>Git Flow</strong> adaptada al contexto de un equipo de desarrollo académico. Se definen ramas con propósitos claros para garantizar la estabilidad del código en producción y facilitar la colaboración paralela entre integrantes del equipo.</p>
+<hr>
+<h2 id="2-estructura-de-ramas">2. Estructura de ramas</h2>
+<pre class="hljs"><code><div>master ──────────────────────────────────────────────── (producción estable)
+  │
+  └── develop ─────────────────────────────────────────── (integración continua)
+        │
+        ├── feature/frontend ───────── (UI React, componentes, páginas)
+        ├── feature/auth-service ────── (autenticación y JWT)
+        ├── feature/ms-mascotas ─────── (reportes y Factory Method)
+        ├── feature/ms-geolocalizacion ─ (geolocalización y clustering)
+        ├── feature/ms-coincidencias ─── (algoritmo fuzzy matching)
+        ├── feature/bff-service ─────── (API Gateway y Circuit Breaker)
+        └── feature/infraestructura ─── (Terraform y Docker)
+</div></code></pre>
+<hr>
+<h2 id="3-descripción-de-cada-rama">3. Descripción de cada rama</h2>
+<h3 id="master"><code>master</code></h3>
+<ul>
+<li><strong>Propósito:</strong> Código en producción, siempre estable y desplegable.</li>
+<li><strong>Política:</strong> Solo recibe merges desde <code>develop</code> tras revisión.</li>
+<li><strong>Protección:</strong> No se hace push directo; requiere Pull Request.</li>
+</ul>
+<h3 id="develop"><code>develop</code></h3>
+<ul>
+<li><strong>Propósito:</strong> Rama de integración continua. Concentra el trabajo de todas las features antes de llegar a producción.</li>
+<li><strong>Política:</strong> Recibe merges de las ramas <code>feature/*</code>.</li>
+<li><strong>Estado:</strong> Siempre debe compilar y pasar los tests.</li>
+</ul>
+<h3 id="feature"><code>feature/*</code></h3>
+<ul>
+<li><strong>Propósito:</strong> Desarrollo de funcionalidades específicas de forma aislada.</li>
+<li><strong>Convención de nombres:</strong> <code>feature/&lt;nombre-componente&gt;</code> en minúsculas y con guiones.</li>
+<li><strong>Política:</strong> Se crean desde <code>develop</code> y se fusionan de vuelta a <code>develop</code> mediante Pull Request.</li>
+</ul>
+<hr>
+<h2 id="4-flujo-de-trabajo-por-integrante">4. Flujo de trabajo por integrante</h2>
+<pre class="hljs"><code><div>1. Crear rama desde develop:
+   git checkout develop
+   git pull origin develop
+   git checkout -b feature/mi-funcionalidad
+
+2. Desarrollar y commitear:
+   git add &lt;archivos&gt;
+   git commit -m &quot;feat: descripción breve del cambio&quot;
+
+3. Sincronizar con develop si hubo cambios:
+   git fetch origin develop
+   git rebase origin/develop
+
+4. Subir rama y abrir Pull Request:
+   git push origin feature/mi-funcionalidad
+
+5. Revisión y merge a develop (sin fast-forward):
+   git checkout develop
+   git merge --no-ff feature/mi-funcionalidad
+   git push origin develop
+
+6. Eliminar rama feature:
+   git branch -d feature/mi-funcionalidad
+   git push origin --delete feature/mi-funcionalidad
+</div></code></pre>
+<hr>
+<h2 id="5-convención-de-mensajes-de-commit">5. Convención de mensajes de commit</h2>
+<p>Se sigue la especificación <strong>Conventional Commits</strong>:</p>
+<pre class="hljs"><code><div>&lt;tipo&gt;(&lt;scope&gt;): &lt;descripción corta&gt;
+
+Tipos válidos:
+  feat     → Nueva funcionalidad
+  fix      → Corrección de bug
+  docs     → Solo documentación
+  refactor → Refactorización sin cambio de comportamiento
+  test     → Agregar o modificar tests
+  chore    → Tareas de mantenimiento (dependencias, CI)
+</div></code></pre>
+<p><strong>Ejemplos:</strong></p>
+<pre class="hljs"><code><div>feat(ms-mascotas): implementar ReporteFactory con Factory Method
+fix(bff-service): corregir circuit breaker cuando ms-mascotas no responde
+test(ms-coincidencias): agregar pruebas unitarias a ScoringService
+docs(auth-service): agregar README con instrucciones de instalación
+</div></code></pre>
+<hr>
+<h2 id="6-gestión-de-conflictos">6. Gestión de conflictos</h2>
+<p>Los conflictos ocurren cuando dos ramas modifican las mismas líneas. El proceso de resolución es:</p>
+<pre class="hljs"><code><div><span class="hljs-comment"># 1. Identificar el conflicto al hacer merge/rebase</span>
+git merge feature/otra-rama
+<span class="hljs-comment"># → CONFLICT (content): Merge conflict in src/main/java/.../Service.java</span>
+
+<span class="hljs-comment"># 2. Abrir el archivo y resolver manualmente</span>
+<span class="hljs-comment"># Buscar marcadores:</span>
+<span class="hljs-comment"># &lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD        ← versión local</span>
+<span class="hljs-comment"># código actual</span>
+<span class="hljs-comment"># =======</span>
+<span class="hljs-comment"># código entrante</span>
+<span class="hljs-comment"># &gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/otra-rama</span>
+
+<span class="hljs-comment"># 3. Dejar el código correcto, eliminar marcadores</span>
+
+<span class="hljs-comment"># 4. Marcar como resuelto</span>
+git add src/main/java/.../Service.java
+
+<span class="hljs-comment"># 5. Continuar el merge</span>
+git commit -m <span class="hljs-string">&quot;fix: resolver conflicto en Service.java entre feature/A y feature/B&quot;</span>
+</div></code></pre>
+<p><strong>Prevención:</strong> Sincronizar frecuentemente con <code>develop</code> (pasos 3 y 4 del flujo) minimiza los conflictos.</p>
+<hr>
+<h2 id="7-evidencia-de-ramas-y-merges-del-proyecto">7. Evidencia de ramas y merges del proyecto</h2>
+<h3 id="ramas-creadas-durante-el-desarrollo">Ramas creadas durante el desarrollo</h3>
+<table>
+<thead>
+<tr>
+<th>Rama</th>
+<th>Propósito</th>
+<th>Estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>master</code></td>
+<td>Producción</td>
+<td>Activa</td>
+</tr>
+<tr>
+<td><code>develop</code></td>
+<td>Integración</td>
+<td>Activa</td>
+</tr>
+<tr>
+<td><code>feature/frontend</code></td>
+<td>Componentes React y mapa</td>
+<td>Mergeada</td>
+</tr>
+<tr>
+<td><code>feature/auth-service</code></td>
+<td>Autenticación JWT</td>
+<td>Mergeada</td>
+</tr>
+<tr>
+<td><code>feature/ms-mascotas</code></td>
+<td>CRUD reportes + Factory</td>
+<td>Mergeada</td>
+</tr>
+<tr>
+<td><code>feature/ms-geolocalizacion</code></td>
+<td>PostGIS + clustering</td>
+<td>Mergeada</td>
+</tr>
+<tr>
+<td><code>feature/ms-coincidencias</code></td>
+<td>Fuzzy matching</td>
+<td>Mergeada</td>
+</tr>
+<tr>
+<td><code>feature/bff-service</code></td>
+<td>API Gateway</td>
+<td>Mergeada</td>
+</tr>
+<tr>
+<td><code>feature/infraestructura</code></td>
+<td>Terraform + Docker</td>
+<td>Mergeada</td>
+</tr>
+</tbody>
+</table>
+<h3 id="historial-de-merges-resumen">Historial de merges (resumen)</h3>
+<pre class="hljs"><code><div>develop ← feature/auth-service      (merge: implementación completa de auth)
+develop ← feature/ms-mascotas       (merge: Factory Method + RabbitMQ publisher)
+develop ← feature/ms-geolocalizacion (merge: PostGIS + clustering algorithm)
+develop ← feature/ms-coincidencias  (merge: FuzzyWuzzy + scoring strategy)
+develop ← feature/bff-service       (merge: Circuit Breaker + proxy services)
+develop ← feature/frontend          (merge: UI completa con Leaflet y Context)
+develop ← feature/infraestructura   (merge: Terraform AWS + docker-compose)
+master  ← develop                   (merge: release v1.0.0 estable)
+</div></code></pre>
+<hr>
+<h2 id="8-integración-continua-con-github-actions">8. Integración continua con GitHub Actions</h2>
+<p>El archivo <code>.github/workflows/ci-cd.yml</code> ejecuta automáticamente:</p>
+<ol>
+<li>
+<p><strong>En cada push a <code>feature/*</code> y <code>develop</code>:</strong></p>
+<ul>
+<li>Compilación Maven de los 5 microservicios</li>
+<li>Ejecución de pruebas unitarias</li>
+<li>Generación de reporte JaCoCo</li>
+</ul>
+</li>
+<li>
+<p><strong>En merge a <code>master</code>:</strong></p>
+<ul>
+<li>Build de imágenes Docker</li>
+<li>Push a Amazon ECR</li>
+<li>Despliegue automático en AWS</li>
+</ul>
+</li>
+</ol>
+<p>Esto garantiza que ningún código roto llegue a las ramas principales.</p>
+<hr>
+<h2 id="9-ventajas-de-esta-estrategia">9. Ventajas de esta estrategia</h2>
+<table>
+<thead>
+<tr>
+<th>Ventaja</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Aislamiento</strong></td>
+<td>Cada integrante trabaja en su rama sin interrumpir al equipo</td>
+</tr>
+<tr>
+<td><strong>Trazabilidad</strong></td>
+<td>El historial de commits muestra qué se cambió, cuándo y por qué</td>
+</tr>
+<tr>
+<td><strong>Estabilidad</strong></td>
+<td><code>master</code> siempre está en estado desplegable</td>
+</tr>
+<tr>
+<td><strong>Revisión</strong></td>
+<td>Los Pull Requests permiten revisión de código antes de integrar</td>
+</tr>
+<tr>
+<td><strong>Rollback</strong></td>
+<td>Si algo falla, se puede revertir un merge específico</td>
+</tr>
+</tbody>
+</table>
+
+</body>
+</html>

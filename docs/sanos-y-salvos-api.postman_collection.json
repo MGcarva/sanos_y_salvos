@@ -1,0 +1,249 @@
+{
+  "info": {
+    "name": "Sanos y Salvos — BFF API",
+    "description": "Colección de endpoints del Backend For Frontend (BFF). Base URL: http://localhost:9090",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:9090" },
+    { "key": "token",    "value": "PEGAR_TOKEN_JWT_AQUI"  }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Registrar usuario",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/register", "host": ["{{base_url}}"], "path": ["api","auth","register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Pérez\",\n  \"email\": \"juan@example.com\",\n  \"password\": \"password123\",\n  \"rol\": \"USER\"\n}"
+            }
+          },
+          "response": [{
+            "name": "201 Created — Registro exitoso",
+            "status": "Created",
+            "code": 201,
+            "body": "{\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiJ9...\",\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiJ9...\",\n  \"expiresIn\": 86400000,\n  \"userId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"nombre\": \"Juan Pérez\",\n  \"email\": \"juan@example.com\",\n  \"rol\": \"USER\"\n}"
+          }]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/login", "host": ["{{base_url}}"], "path": ["api","auth","login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"juan@example.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "response": [{
+            "name": "200 OK — Login exitoso",
+            "status": "OK",
+            "code": 200,
+            "body": "{\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiJ9...\",\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiJ9...\",\n  \"expiresIn\": 86400000,\n  \"userId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"nombre\": \"Juan Pérez\",\n  \"email\": \"juan@example.com\",\n  \"rol\": \"USER\"\n}"
+          }]
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/auth/refresh", "host": ["{{base_url}}"], "path": ["api","auth","refresh"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiJ9...\"\n}"
+            }
+          },
+          "response": [{
+            "name": "200 OK — Nuevo access token",
+            "status": "OK",
+            "code": 200,
+            "body": "{\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiJ9_nuevo...\",\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiJ9_nuevo...\",\n  \"expiresIn\": 86400000\n}"
+          }]
+        },
+        {
+          "name": "Verificar email",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/auth/verify-email?token=TOKEN_VERIFICACION", "host": ["{{base_url}}"], "path": ["api","auth","verify-email"], "query": [{ "key": "token", "value": "TOKEN_VERIFICACION" }] }
+          },
+          "response": [{
+            "name": "200 OK — Email verificado",
+            "status": "OK",
+            "code": 200,
+            "body": "{\n  \"message\": \"Email verificado exitosamente\"\n}"
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Reportes",
+      "item": [
+        {
+          "name": "Listar reportes activos",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/reportes", "host": ["{{base_url}}"], "path": ["api","reportes"] }
+          },
+          "response": [{
+            "name": "200 OK — Lista de reportes",
+            "status": "OK",
+            "code": 200,
+            "body": "[\n  {\n    \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"tipo\": \"PERDIDO\",\n    \"especie\": \"Perro\",\n    \"raza\": \"Labrador\",\n    \"nombre\": \"Max\",\n    \"color\": \"Dorado\",\n    \"tamano\": \"GRANDE\",\n    \"descripcion\": \"Perro labrador perdido en parque\",\n    \"lat\": -33.4489,\n    \"lng\": -70.6693,\n    \"direccion\": \"Parque Bustamante, Santiago\",\n    \"fechaEvento\": \"2026-06-01\",\n    \"recompensa\": 50000,\n    \"estado\": \"ACTIVO\",\n    \"fotoUrl\": \"http://localhost:9001/mascotas-fotos/foto.jpg\"\n  }\n]"
+          }]
+        },
+        {
+          "name": "Obtener reporte por ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/reportes/3fa85f64-5717-4562-b3fc-2c963f66afa6", "host": ["{{base_url}}"], "path": ["api","reportes","3fa85f64-5717-4562-b3fc-2c963f66afa6"] }
+          },
+          "response": [{
+            "name": "200 OK — Reporte encontrado",
+            "status": "OK",
+            "code": 200,
+            "body": "{\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"tipo\": \"PERDIDO\",\n  \"especie\": \"Perro\",\n  \"nombre\": \"Max\",\n  \"contactoNombre\": \"Juan Pérez\",\n  \"contactoTelefono\": \"+56912345678\"\n}"
+          }]
+        },
+        {
+          "name": "Crear reporte (requiere auth)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/reportes", "host": ["{{base_url}}"], "path": ["api","reportes"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "reporte", "value": "{\"tipo\":\"PERDIDO\",\"especie\":\"Perro\",\"raza\":\"Labrador\",\"nombre\":\"Max\",\"color\":\"Dorado\",\"tamano\":\"GRANDE\",\"descripcion\":\"Perro labrador perdido\",\"lat\":-33.4489,\"lng\":-70.6693,\"direccion\":\"Parque Bustamante, Santiago\",\"fechaEvento\":\"2026-06-01\",\"recompensa\":50000}", "type": "text", "contentType": "application/json" },
+                { "key": "foto", "type": "file", "src": "", "description": "Imagen JPG/PNG (opcional, máx 10MB)" }
+              ]
+            }
+          },
+          "response": [{
+            "name": "201 Created — Reporte creado",
+            "status": "Created",
+            "code": 201,
+            "body": "{\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"tipo\": \"PERDIDO\",\n  \"especie\": \"Perro\",\n  \"nombre\": \"Max\",\n  \"estado\": \"ACTIVO\",\n  \"fotoUrl\": \"http://localhost:9001/mascotas-fotos/foto.jpg\"\n}"
+          }]
+        },
+        {
+          "name": "Mis reportes (requiere auth)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/reportes/mis-reportes", "host": ["{{base_url}}"], "path": ["api","reportes","mis-reportes"] }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "[{ \"id\": \"...\", \"tipo\": \"PERDIDO\", \"especie\": \"Perro\" }]" }]
+        },
+        {
+          "name": "Actualizar estado (requiere auth)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/reportes/3fa85f64-5717-4562-b3fc-2c963f66afa6/estado?estado=RESUELTO", "host": ["{{base_url}}"], "path": ["api","reportes","3fa85f64-5717-4562-b3fc-2c963f66afa6","estado"], "query": [{ "key": "estado", "value": "RESUELTO" }] }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "{ \"id\": \"...\", \"estado\": \"RESUELTO\" }" }]
+        },
+        {
+          "name": "Buscar por características",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/reportes/buscar?tipo=PERDIDO&especie=Perro&raza=Labrador&color=Dorado", "host": ["{{base_url}}"], "path": ["api","reportes","buscar"], "query": [
+              { "key": "tipo",    "value": "PERDIDO"  },
+              { "key": "especie", "value": "Perro"    },
+              { "key": "raza",    "value": "Labrador" },
+              { "key": "color",   "value": "Dorado"   },
+              { "key": "nombre",  "value": "", "disabled": true },
+              { "key": "tamano",  "value": "", "disabled": true },
+              { "key": "direccion","value":"","disabled": true }
+            ]}
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "[{ \"id\": \"...\", \"tipo\": \"PERDIDO\", \"especie\": \"Perro\", \"raza\": \"Labrador\" }]" }]
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Obtener dashboard (cached)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/dashboard", "host": ["{{base_url}}"], "path": ["api","dashboard"] }
+          },
+          "response": [{
+            "name": "200 OK — Dashboard con cache Redis",
+            "status": "OK",
+            "code": 200,
+            "body": "{\n  \"timestamp\": \"2026-06-09T20:00:00\",\n  \"reportes\": [\n    {\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"tipo\": \"PERDIDO\",\n      \"especie\": \"Perro\",\n      \"nombre\": \"Max\",\n      \"lat\": -33.4489,\n      \"lng\": -70.6693\n    }\n  ],\n  \"heatmap\": [\n    { \"lat\": -33.4489, \"lng\": -70.6693, \"tipo\": \"PERDIDO\" }\n  ]\n}"
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Geolocalización",
+      "item": [
+        {
+          "name": "Mapa de calor",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/geo/heatmap", "host": ["{{base_url}}"], "path": ["api","geo","heatmap"] }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "[{ \"lat\": -33.4489, \"lng\": -70.6693, \"tipo\": \"PERDIDO\" }]" }]
+        },
+        {
+          "name": "Reportes cercanos",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/geo/nearby?lat=-33.4489&lng=-70.6693&radiusKm=5", "host": ["{{base_url}}"], "path": ["api","geo","nearby"], "query": [
+              { "key": "lat",      "value": "-33.4489" },
+              { "key": "lng",      "value": "-70.6693" },
+              { "key": "radiusKm", "value": "5"        }
+            ]}
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "[{ \"id\": \"...\", \"distanciaKm\": 1.2 }]" }]
+        },
+        {
+          "name": "Clusters geográficos",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/geo/clusters", "host": ["{{base_url}}"], "path": ["api","geo","clusters"] }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "[{ \"lat\": -33.4489, \"lng\": -70.6693, \"cantidad\": 5 }]" }]
+        }
+      ]
+    },
+    {
+      "name": "Coincidencias",
+      "item": [
+        {
+          "name": "Coincidencias para mascota PERDIDA",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/coincidencias/perdido/3fa85f64-5717-4562-b3fc-2c963f66afa6", "host": ["{{base_url}}"], "path": ["api","coincidencias","perdido","3fa85f64-5717-4562-b3fc-2c963f66afa6"] }
+          },
+          "response": [{
+            "name": "200 OK — Lista de coincidencias ordenadas por score",
+            "status": "OK",
+            "code": 200,
+            "body": "[\n  {\n    \"id\": \"abc...\",\n    \"reportePerdidoId\": \"3fa85f64...\",\n    \"reporteEncontradoId\": \"abc12345...\",\n    \"scoreTotal\": 85.5,\n    \"scoreRaza\": 28.0,\n    \"scoreTamano\": 20.0,\n    \"scoreColor\": 8.5,\n    \"scoreGeo\": 11.0,\n    \"distanciaKm\": 2.3,\n    \"estado\": \"PENDIENTE\"\n  }\n]"
+          }]
+        },
+        {
+          "name": "Coincidencias para mascota ENCONTRADA",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/coincidencias/encontrado/abc12345-5717-4562-b3fc-2c963f66afa6", "host": ["{{base_url}}"], "path": ["api","coincidencias","encontrado","abc12345-5717-4562-b3fc-2c963f66afa6"] }
+          },
+          "response": [{ "name": "200 OK", "status": "OK", "code": 200, "body": "[{ \"scoreTotal\": 85.5, \"estado\": \"PENDIENTE\" }]" }]
+        }
+      ]
+    }
+  ]
+}

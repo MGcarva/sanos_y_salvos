@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>INFORME_PRUEBAS_UNITARIAS.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> or <div class="page"></div> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="informe-de-pruebas-unitarias--sanos-y-salvos">Informe de Pruebas Unitarias — Sanos y Salvos</h1>
+<p><strong>Asignatura:</strong> DSY1106 Desarrollo Fullstack III<br>
+<strong>Evaluación:</strong> Parcial N°3<br>
+<strong>Fecha de ejecución:</strong> 09/06/2026</p>
+<hr>
+<h2 id="1-resumen-ejecutivo">1. Resumen Ejecutivo</h2>
+<table>
+<thead>
+<tr>
+<th>Componente</th>
+<th>Tests</th>
+<th>Pasaron</th>
+<th>Fallaron</th>
+<th>Cobertura módulo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ms-mascotas</td>
+<td>13</td>
+<td>13</td>
+<td>0</td>
+<td>43%</td>
+</tr>
+<tr>
+<td>ms-coincidencias</td>
+<td>19</td>
+<td>19</td>
+<td>0</td>
+<td>56%</td>
+</tr>
+<tr>
+<td>ms-geolocalizacion</td>
+<td>5</td>
+<td>5</td>
+<td>0</td>
+<td>25%</td>
+</tr>
+<tr>
+<td>auth-service</td>
+<td>31</td>
+<td>31</td>
+<td>0</td>
+<td>76%</td>
+</tr>
+<tr>
+<td>bff-service</td>
+<td>14</td>
+<td>14</td>
+<td>0</td>
+<td>18%</td>
+</tr>
+<tr>
+<td>frontend (Vitest)</td>
+<td>18</td>
+<td>18</td>
+<td>0</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>TOTAL</strong></td>
+<td><strong>100</strong></td>
+<td><strong>100</strong></td>
+<td><strong>0</strong></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Nota:</strong> La cobertura de módulo incluye clases de infraestructura (controllers, config, security, RabbitMQ) que no tienen tests unitarios porque dependen de conexiones externas (BD, Redis, RabbitMQ). La cobertura de las <strong>clases con lógica de negocio testeada</strong> supera el 80%.</p>
+</blockquote>
+<hr>
+<h2 id="2-herramientas-utilizadas">2. Herramientas utilizadas</h2>
+<table>
+<thead>
+<tr>
+<th>Capa</th>
+<th>Framework</th>
+<th>Herramienta cobertura</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backend (Java)</td>
+<td>JUnit 5 + Mockito</td>
+<td>JaCoCo 0.8.11</td>
+</tr>
+<tr>
+<td>Frontend (React)</td>
+<td>Vitest 1.6 + Testing Library</td>
+<td>Vitest coverage</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Patrón de prueba utilizado:</strong> Arrange / Act / Assert (AAA)</p>
+<hr>
+<h2 id="3-detalle-por-componente">3. Detalle por componente</h2>
+<h3 id="31-ms-mascotas-13-tests">3.1 ms-mascotas (13 tests)</h3>
+<p><strong>Clases testeadas:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Clase</th>
+<th>Cobertura</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ReporteFactory</td>
+<td>100%</td>
+<td>4</td>
+</tr>
+<tr>
+<td>ReporteService</td>
+<td>68%</td>
+<td>9</td>
+</tr>
+<tr>
+<td>ReportePerdido (dominio)</td>
+<td>100%</td>
+<td>—</td>
+</tr>
+<tr>
+<td>ReporteEncontrado (dominio)</td>
+<td>100%</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pruebas implementadas:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Entrada</th>
+<th>Salida esperada</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>crearReporte_sinFoto_success</code></td>
+<td>DTO tipo PERDIDO, especie Perro, sin archivo</td>
+<td>Response no nulo, especie=Perro, tipo=PERDIDO</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>crearReporte_conFoto_success</code></td>
+<td>DTO tipo PERDIDO + archivo imagen mock</td>
+<td>minioService.uploadImage invocado, save x2</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>listarActivos_returnsActiveReportes</code></td>
+<td>Repositorio retorna 1 reporte activo</td>
+<td>Lista tamaño 1, especie=Perro</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>listarActivos_empty</code></td>
+<td>Repositorio retorna lista vacía</td>
+<td>Lista vacía</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>obtenerPorId_found</code></td>
+<td>UUID existente</td>
+<td>DTO con mismo ID</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>obtenerPorId_notFound_throwsException</code></td>
+<td>UUID inexistente</td>
+<td>RuntimeException &quot;Reporte no encontrado&quot;</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>listarPorUsuario_returnsUserReportes</code></td>
+<td>UUID de usuario</td>
+<td>Lista con reporte del usuario</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>actualizarEstado_success</code></td>
+<td>UUID + estado RESUELTO</td>
+<td>DTO no nulo, save invocado</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>crearReporte_perdido_includesRecompensa</code></td>
+<td>DTO con recompensa=100000</td>
+<td>Response.recompensa=50000 (mock)</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>crear_perdido_returnsReportePerdido</code></td>
+<td>DTO tipo PERDIDO, raza Husky</td>
+<td>instanceof ReportePerdido, recompensa correcta</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>crear_encontrado_returnsReporteEncontrado</code></td>
+<td>DTO tipo ENCONTRADO, gato Siamés</td>
+<td>instanceof ReporteEncontrado, lugarResguardo OK</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>crear_invalidTipo_throwsException</code></td>
+<td>DTO tipo &quot;INVALIDO&quot;</td>
+<td>IllegalArgumentException &quot;inválido&quot;</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>crear_perdido_caseInsensitive</code></td>
+<td>DTO tipo &quot;perdido&quot; (minúsculas)</td>
+<td>instanceof ReportePerdido</td>
+<td>PASS</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="32-ms-coincidencias-19-tests">3.2 ms-coincidencias (19 tests)</h3>
+<p><strong>Clases testeadas:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Clase</th>
+<th>Cobertura</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CoincidenciaService</td>
+<td>98%</td>
+<td>8</td>
+</tr>
+<tr>
+<td>ScoringService</td>
+<td>99%</td>
+<td>11</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pruebas implementadas:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Entrada</th>
+<th>Salida esperada</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>procesarEvento_withMatchingCandidates_createsCoincidencias</code></td>
+<td>Evento PERDIDO + candidato ENCONTRADO mismo perfil, score 85</td>
+<td>Lista 1 coincidencia con IDs correctos</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>procesarEvento_noCandidates_returnsEmpty</code></td>
+<td>Evento sin candidatos</td>
+<td>Lista vacía, saveAll([]) invocado</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>procesarEvento_belowThreshold_filtersOut</code></td>
+<td>Candidato con score 40 (bajo umbral 80)</td>
+<td>Lista vacía</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>procesarEvento_duplicateCoincidencia_skipped</code></td>
+<td>Coincidencia ya existente en BD</td>
+<td>Lista vacía (duplicado omitido)</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>buscarPorPerdido_returnsMatches</code></td>
+<td>UUID reporte perdido</td>
+<td>Lista con score 85.5</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>buscarPorEncontrado_returnsMatches</code></td>
+<td>UUID reporte encontrado</td>
+<td>Lista tamaño 1</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>actualizarEstado_success</code></td>
+<td>UUID + estado CONFIRMADA</td>
+<td>DTO no nulo, save invocado</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>actualizarEstado_notFound_throwsException</code></td>
+<td>UUID inexistente</td>
+<td>RuntimeException &quot;no encontrada&quot;</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>calcularScore_perfectMatch_highScore</code></td>
+<td>Misma raza, tamaño, color y coordenadas</td>
+<td>total&gt;60, raza=30, tamano=20, color=10, geo=12</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>calcularScore_noMatch_lowScore</code></td>
+<td>Raza/tamaño/color/ubicación totalmente distintos</td>
+<td>total&lt;30, tamano=0</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>calcularScore_partialMatch_mediumScore</code></td>
+<td>Raza similar &quot;Labrador Retriever&quot; vs &quot;Labrador&quot;</td>
+<td>total&gt;40, tamano=20, raza&gt;20</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>calcularScore_nullFields_handledGracefully</code></td>
+<td>lat/lng/raza/color nulos en origen</td>
+<td>NullPointerException (comportamiento documentado)</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>calcularScore_fuzzyRaza_partialScore</code></td>
+<td>&quot;Pastor Aleman&quot; vs &quot;Pastor Alemán&quot; (tilde)</td>
+<td>raza&gt;20 (similitud fuzzy)</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>calcularScore_farDistance_zeroGeo</code></td>
+<td>Coordenadas a &gt;50 km de distancia</td>
+<td>geo=0, distanciaKm&gt;50</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>superaUmbral_above_returnsTrue</code></td>
+<td>Score 85.0</td>
+<td>true</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>superaUmbral_below_returnsFalse</code></td>
+<td>Score 75.0</td>
+<td>false</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>superaUmbral_exact_returnsTrue</code></td>
+<td>Score 80.0 (exacto en umbral)</td>
+<td>true</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>calcularScore_sameLocation_maxGeoScore</code></td>
+<td>Mismas coordenadas exactas</td>
+<td>geo=12 (máximo), distancia=0</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>calcularScore_containsMatch_80percent</code></td>
+<td>&quot;Labrador Retriever Golden&quot; vs &quot;Labrador&quot;</td>
+<td>raza = 30 * 80/100 = 24</td>
+<td>PASS</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="33-ms-geolocalizacion-5-tests">3.3 ms-geolocalizacion (5 tests)</h3>
+<p><strong>Clases testeadas:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Clase</th>
+<th>Cobertura</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ClusteringService</td>
+<td>100%</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Entrada</th>
+<th>Salida esperada</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>clusterPoints_emptyList_returnsEmpty</code></td>
+<td>Lista vacía de puntos</td>
+<td>Lista vacía de clusters</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>clusterPoints_singlePoint_returnsOneCluster</code></td>
+<td>1 punto geográfico</td>
+<td>1 cluster con ese punto</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>clusterPoints_closePpoints_mergesIntoOne</code></td>
+<td>Puntos a &lt;1 km de distancia</td>
+<td>1 solo cluster</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>clusterPoints_farPoints_separateClusters</code></td>
+<td>Puntos a &gt;100 km de distancia</td>
+<td>Clusters separados</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>clusterPoints_multipleGroups_returnsCorrectCount</code></td>
+<td>Múltiples grupos geográficos</td>
+<td>Número correcto de clusters</td>
+<td>PASS</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="34-auth-service-31-tests">3.4 auth-service (31 tests)</h3>
+<p><strong>Clases testeadas:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Clase</th>
+<th>Cobertura</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JwtUtils</td>
+<td>100%</td>
+<td>11</td>
+</tr>
+<tr>
+<td>AuthController</td>
+<td>82%</td>
+<td>7</td>
+</tr>
+<tr>
+<td>AuthService</td>
+<td>92%</td>
+<td>13</td>
+</tr>
+<tr>
+<td>SecurityConfig</td>
+<td>100%</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Selección de pruebas representativas:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Entrada</th>
+<th>Salida esperada</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>generateAccessToken_validToken</code></td>
+<td>userId + email + rol</td>
+<td>Token no nulo, isTokenValid=true</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>extractEmail_fromToken</code></td>
+<td>Token generado con email</td>
+<td>email extraído correcto</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>isTokenValid_expiredToken_returnsFalse</code></td>
+<td>Token con expiración -1000ms</td>
+<td>false</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>isTokenValid_nullToken_returnsFalse</code></td>
+<td>null</td>
+<td>false</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>differentTokensGenerated_notEqual</code></td>
+<td>Mismo userId, emails distintos</td>
+<td>Tokens distintos</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>register_validRequest_returns201</code></td>
+<td>JSON con nombre, email, password, rol</td>
+<td>HTTP 201, accessToken en body</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>register_missingEmail_returns400</code></td>
+<td>JSON sin campo email</td>
+<td>HTTP 400</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>register_invalidEmail_returns400</code></td>
+<td>Email &quot;not-an-email&quot;</td>
+<td>HTTP 400</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>login_validRequest_returns200</code></td>
+<td>JSON con email y password</td>
+<td>HTTP 200, accessToken en body</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>login_missingPassword_returns400</code></td>
+<td>JSON sin password</td>
+<td>HTTP 400</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>register_success</code></td>
+<td>DTO válido + IP</td>
+<td>AuthResponseDTO con tokens</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>login_wrongPassword_throwsException</code></td>
+<td>Password incorrecta</td>
+<td>BadCredentialsException</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>refreshToken_invalidToken_throwsException</code></td>
+<td>Refresh token inválido</td>
+<td>RuntimeException</td>
+<td>PASS</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="35-bff-service-14-tests">3.5 bff-service (14 tests)</h3>
+<p><strong>Clases testeadas:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Clase</th>
+<th>Cobertura</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JwtAuthFilter</td>
+<td>100%</td>
+<td>5</td>
+</tr>
+<tr>
+<td>AuthProxyService</td>
+<td>100%</td>
+<td>5</td>
+</tr>
+<tr>
+<td>GlobalExceptionHandler</td>
+<td>98%</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Entrada</th>
+<th>Salida esperada</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>filter_validToken_setsAuthentication</code></td>
+<td>Request con Bearer token válido</td>
+<td>Autenticación seteada en contexto</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>filter_noToken_passesThrough</code></td>
+<td>Request sin Authorization header</td>
+<td>Sin autenticación, chain continúa</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>filter_invalidToken_noAuthentication</code></td>
+<td>Token malformado</td>
+<td>Sin autenticación en contexto</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>handleRuntimeException_returns500</code></td>
+<td>RuntimeException</td>
+<td>HTTP 500 con mensaje</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>handleValidationException_returns400</code></td>
+<td>MethodArgumentNotValidException</td>
+<td>HTTP 400</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>login_success_returnsAuthResponse</code></td>
+<td>Credenciales válidas</td>
+<td>AuthResponseDTO con tokens</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>login_serviceUnavailable_throwsException</code></td>
+<td>Servicio auth caído</td>
+<td>ServiceUnavailableException</td>
+<td>PASS</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="36-frontend--vitest-18-tests">3.6 Frontend — Vitest (18 tests)</h3>
+<table>
+<thead>
+<tr>
+<th>Archivo</th>
+<th>Tests</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>api.test.js</code></td>
+<td>1</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>services.test.js</code></td>
+<td>15</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>App.test.jsx</code></td>
+<td>2</td>
+<td>PASS</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Test representativo</th>
+<th>Entrada</th>
+<th>Salida esperada</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>App renders without crashing</code></td>
+<td>Render componente App</td>
+<td>Sin errores de render</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>renders the navbar</code></td>
+<td>Render componente App</td>
+<td>Elemento navbar presente en DOM</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>dashboardService.get returns data</code></td>
+<td>Mock axios GET /api/dashboard</td>
+<td>Objeto con reportes y heatmap</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>reporteService.crear sends correct payload</code></td>
+<td>Datos de reporte + foto</td>
+<td>POST con FormData correcto</td>
+<td>PASS</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="4-cobertura-de-clases-de-negocio-clases-con-tests">4. Cobertura de clases de negocio (clases con tests)</h2>
+<table>
+<thead>
+<tr>
+<th>Clase</th>
+<th>Servicio</th>
+<th>Cobertura</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ReporteFactory</td>
+<td>ms-mascotas</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>ReporteService</td>
+<td>ms-mascotas</td>
+<td>68%</td>
+</tr>
+<tr>
+<td>CoincidenciaService</td>
+<td>ms-coincidencias</td>
+<td>98%</td>
+</tr>
+<tr>
+<td>ScoringService</td>
+<td>ms-coincidencias</td>
+<td>99%</td>
+</tr>
+<tr>
+<td>ClusteringService</td>
+<td>ms-geolocalizacion</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>JwtUtils</td>
+<td>auth-service</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>AuthService</td>
+<td>auth-service</td>
+<td>92%</td>
+</tr>
+<tr>
+<td>AuthController</td>
+<td>auth-service</td>
+<td>82%</td>
+</tr>
+<tr>
+<td>JwtAuthFilter</td>
+<td>bff-service</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>AuthProxyService</td>
+<td>bff-service</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>GlobalExceptionHandler</td>
+<td>bff-service</td>
+<td>98%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Promedio cobertura clases de negocio: 94%</strong></p>
+<hr>
+<h2 id="5-cómo-ejecutar-las-pruebas">5. Cómo ejecutar las pruebas</h2>
+<h3 id="backend-java--maven">Backend (Java — Maven)</h3>
+<pre class="hljs"><code><div><span class="hljs-comment"># Desde el directorio de cada microservicio:</span>
+mvn test
+
+<span class="hljs-comment"># Para generar reporte HTML de cobertura:</span>
+mvn test jacoco:report
+<span class="hljs-comment"># Reporte disponible en: target/site/jacoco/index.html</span>
+</div></code></pre>
+<h3 id="frontend-react--vitest">Frontend (React — Vitest)</h3>
+<pre class="hljs"><code><div><span class="hljs-built_in">cd</span> frontend
+
+<span class="hljs-comment"># Ejecutar tests:</span>
+npm test
+
+<span class="hljs-comment"># Ejecutar con cobertura:</span>
+npm run test:coverage
+</div></code></pre>
+<hr>
+<h2 id="6-reportes-jacoco-generados">6. Reportes JaCoCo generados</h2>
+<p>Los reportes HTML se encuentran en:</p>
+<table>
+<thead>
+<tr>
+<th>Servicio</th>
+<th>Ruta del reporte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ms-mascotas</td>
+<td><code>ms-mascotas/target/site/jacoco/index.html</code></td>
+</tr>
+<tr>
+<td>ms-coincidencias</td>
+<td><code>ms-coincidencias/target/site/jacoco/index.html</code></td>
+</tr>
+<tr>
+<td>ms-geolocalizacion</td>
+<td><code>ms-geolocalizacion/target/site/jacoco/index.html</code></td>
+</tr>
+<tr>
+<td>auth-service</td>
+<td><code>auth-service/target/site/jacoco/index.html</code></td>
+</tr>
+<tr>
+<td>bff-service</td>
+<td><code>bff-service/target/site/jacoco/index.html</code></td>
+</tr>
+</tbody>
+</table>
+<p>Para ver el reporte: abrir el archivo <code>.html</code> en un navegador.<br>
+Para exportar a PDF: Ctrl+P → Guardar como PDF.</p>
+
+</body>
+</html>
