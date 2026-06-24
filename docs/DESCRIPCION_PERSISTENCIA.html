@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Descripción de la Persistencia — Sanos y Salvos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1a1a1a; background: #fff; margin: 0; padding: 24px 40px; }
+  h1 { font-size: 22px; color: #1a3a5c; border-bottom: 3px solid #2563eb; padding-bottom: 8px; margin-bottom: 6px; }
+  .subtitle { color: #555; font-size: 11px; margin-bottom: 20px; }
+  h2 { font-size: 15px; color: #2563eb; margin: 22px 0 8px; border-left: 4px solid #2563eb; padding-left: 8px; }
+  h3 { font-size: 13px; color: #1a3a5c; margin: 14px 0 6px; }
+  h4 { font-size: 12px; color: #374151; margin: 10px 0 4px; font-style: italic; }
+  p { margin: 6px 0; line-height: 1.6; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px; }
+  th { background: #2563eb; color: #fff; padding: 7px 10px; text-align: left; }
+  td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; }
+  tr:nth-child(even) td { background: #f0f4ff; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 12px 14px; border-radius: 6px; font-size: 10.5px; overflow-x: auto; margin: 8px 0; white-space: pre-wrap; word-break: break-all; }
+  code { font-family: 'Consolas', 'Courier New', monospace; }
+  pre code { color: #e2e8f0; }
+  .badge { display: inline-block; background: #dbeafe; color: #1d4ed8; border-radius: 4px; padding: 1px 7px; font-size: 10px; font-weight: 600; margin-left: 6px; }
+  .section-box { background: #f8faff; border: 1px solid #dbeafe; border-radius: 6px; padding: 12px 16px; margin: 10px 0; }
+  .flow-box { background: #1e293b; color: #94d2bd; font-family: 'Consolas', monospace; font-size: 10.5px; padding: 14px; border-radius: 6px; margin: 10px 0; white-space: pre; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+  @media print { body { padding: 20px 30px; } pre { page-break-inside: avoid; } }
+</style>
+</head>
+<body>
+
+<h1>Descripción de la Persistencia de Datos</h1>
+<div class="subtitle">
+  <strong>Proyecto:</strong> Sanos y Salvos &nbsp;|&nbsp;
+  <strong>Asignatura:</strong> DSY1106 Desarrollo Fullstack III &nbsp;|&nbsp;
+  <strong>Evaluación:</strong> Parcial N°3 &nbsp;|&nbsp;
+  <strong>Fecha:</strong> Junio 2026
+</div>
+
+<h2>1. Tecnologías de Persistencia Utilizadas</h2>
+<table>
+  <thead><tr><th>Tecnología</th><th>Uso</th><th>Servicio</th></tr></thead>
+  <tbody>
+    <tr><td>PostgreSQL + JPA/Hibernate</td><td>Persistencia principal de entidades</td><td>ms-mascotas, ms-coincidencias, auth-service</td></tr>
+    <tr><td>PostGIS + Hibernate Spatial</td><td>Persistencia y consultas geoespaciales</td><td>ms-geolocalizacion</td></tr>
+    <tr><td>Redis</td><td>Caché de sesiones y dashboard</td><td>auth-service, bff-service</td></tr>
+    <tr><td>MinIO (S3-compatible)</td><td>Almacenamiento de fotos de mascotas</td><td>ms-mascotas</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>2. JPA / Hibernate — Persistencia Relacional</h2>
+
+<h3>2.1 Configuración Base</h3>
+<p>Todos los microservicios con BD relacional usan <strong>Spring Data JPA</strong> con Hibernate como implementación ORM. La configuración se declara en <code>application.yml</code>:</p>
+
+<pre><code>spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/mascotas_db
+    username: ${DB_USER}
+    password: ${DB_PASS}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect</code></pre>
+
+<h3>2.2 ms-mascotas — Modelo de Entidades</h3>
+<p>El microservicio usa el <strong>patrón Factory Method</strong> para crear reportes y <strong>herencia de tabla única</strong> en JPA:</p>
+
+<div class="section-box">
+<code>
+Reporte (clase base)<br>
+├── ReportePerdido  &rarr; campo: recompensa<br>
+└── ReporteEncontrado &rarr; campos: lugarResguardo, tieneCollar
+</code>
+</div>
+
+<p><strong>Entidad principal:</strong></p>
+<pre><code>@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "tipo")
+public abstract class Reporte {
+    @Id @GeneratedValue
+    private UUID id;
+
+    private String especie;
+    private String raza;
+    private String nombre;
+    private String color;
+    @Enumerated(EnumType.STRING)
+    private Tamano tamano;       // PEQUENO, MEDIANO, GRANDE
+    private Double lat;
+    private Double lng;
+    private String direccion;
+    private String fotoUrl;
+
+    @Enumerated(EnumType.STRING)
+    private EstadoReporte estado; // ACTIVO, RESUELTO, ELIMINADO
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+}</code></pre>
+
+<p><strong>Repositorio JPA:</strong></p>
+<pre><code>public interface ReporteRepository extends JpaRepository&lt;Reporte, UUID&gt; {
+    @Query("SELECT r FROM Reporte r WHERE r.estado = 'ACTIVO'")
+    List&lt;Reporte&gt; findAllActivos();
+
+    List&lt;Reporte&gt; findByUserId(UUID userId);
+}</code></pre>
+
+<h3>2.3 ms-coincidencias — Modelo de Entidades</h3>
+<pre><code>@Entity
+public class Coincidencia {
+    @Id @GeneratedValue
+    private UUID id;
+
+    private UUID reportePerdidoId;
+    private UUID reporteEncontradoId;
+    private Double scoreTotal;    // 0-100
+    private Double scoreRaza;
+    private Double scoreTamano;
+    private Double scoreColor;
+    private Double scoreGeo;
+    private Double distanciaKm;
+
+    @Enumerated(EnumType.STRING)
+    private EstadoCoincidencia estado; // PENDIENTE, CONFIRMADA, DESCARTADA
+}</code></pre>
+
+<h3>2.4 auth-service — Modelo de Entidades</h3>
+<pre><code>@Entity
+@Table(name = "users")
+public class User {
+    @Id @GeneratedValue
+    private UUID id;
+
+    private String nombre;
+    @Column(unique = true)
+    private String email;
+    private String password; // BCrypt encoded
+
+    @Enumerated(EnumType.STRING)
+    private RolUsuario rol;  // USER, REFUGIO, ADMIN
+
+    private boolean emailVerificado;
+    private String tokenVerificacion;
+}</code></pre>
+
+<hr>
+
+<h2>3. PostGIS — Persistencia Geoespacial</h2>
+
+<h3>3.1 Extensión PostgreSQL</h3>
+<p><strong>ms-geolocalizacion</strong> usa <strong>PostGIS</strong> para almacenar y consultar coordenadas geográficas con precisión espacial:</p>
+<pre><code>-- Habilitado en el init script
+CREATE EXTENSION IF NOT EXISTS postgis;</code></pre>
+
+<h3>3.2 Entidad con Campo Geométrico</h3>
+<pre><code>@Entity
+public class PuntoGeo {
+    @Id @GeneratedValue
+    private UUID id;
+
+    private UUID reporteId;
+    private String tipo; // PERDIDO | ENCONTRADO
+
+    @Column(columnDefinition = "geometry(Point,4326)")
+    private Point ubicacion; // org.locationtech.jts.geom.Point
+}</code></pre>
+
+<h3>3.3 Consulta Espacial con Hibernate Spatial</h3>
+<pre><code>// Buscar puntos dentro de un radio (km) usando ST_DWithin de PostGIS
+@Query(value = """
+    SELECT * FROM punto_geo
+    WHERE ST_DWithin(
+        ubicacion::geography,
+        ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
+        :radiusMeters
+    )
+    """, nativeQuery = true)
+List&lt;PuntoGeo&gt; findNearby(double lat, double lng, double radiusMeters);</code></pre>
+
+<hr>
+
+<h2>4. Redis — Caché</h2>
+
+<h3>4.1 auth-service (Caché de Sesiones)</h3>
+<p>Redis almacena tokens de refresco y control de rate limiting:</p>
+<pre><code>@Service
+public class RateLimitService {
+    private final StringRedisTemplate redis;
+
+    public boolean isRateLimited(String ip) {
+        String key = "rate:" + ip;
+        Long count = redis.opsForValue().increment(key);
+        if (count == 1) redis.expire(key, Duration.ofMinutes(1));
+        return count > 10; // máximo 10 intentos por minuto
+    }
+}</code></pre>
+
+<h3>4.2 bff-service (Caché de Dashboard)</h3>
+<p>El BFF cachea el endpoint <code>/api/dashboard</code> para evitar consultar todos los microservicios en cada petición:</p>
+<pre><code>@Service
+public class DashboardService {
+    private static final String CACHE_KEY = "dashboard:data";
+    private static final long TTL_SECONDS = 300; // 5 minutos
+
+    public Map&lt;String, Object&gt; getDashboard() {
+        String cached = redis.opsForValue().get(CACHE_KEY);
+        if (cached != null) return objectMapper.readValue(cached, Map.class);
+
+        // Cache MISS: consultar microservicios
+        Map&lt;String, Object&gt; data = buildDashboard();
+        redis.opsForValue().set(CACHE_KEY, objectMapper.writeValueAsString(data),
+            Duration.ofSeconds(TTL_SECONDS));
+        return data;
+    }
+
+    public void invalidateCache() {
+        redis.delete(CACHE_KEY);
+    }
+}</code></pre>
+
+<hr>
+
+<h2>5. MinIO — Almacenamiento de Fotos</h2>
+<p>MinIO es un servidor de objetos compatible con S3 que almacena las fotos de los reportes:</p>
+<pre><code>@Service
+public class MinioService {
+    private final MinioClient minioClient;
+
+    public String uploadImage(MultipartFile file, UUID reporteId) {
+        String objectName = reporteId.toString() + ".jpg";
+        minioClient.putObject(PutObjectArgs.builder()
+            .bucket("mascotas-fotos")
+            .object(objectName)
+            .stream(file.getInputStream(), file.getSize(), -1)
+            .contentType(file.getContentType())
+            .build());
+        return minioClient.getPresignedObjectUrl(...); // URL pública
+    }
+}</code></pre>
+
+<p><strong>Configuración:</strong></p>
+<pre><code>minio:
+  endpoint: http://minio:9000
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
+  bucket: mascotas-fotos</code></pre>
+
+<hr>
+
+<h2>6. Diagrama de Flujo de Persistencia</h2>
+
+<div class="flow-box">Usuario
+  │
+  ▼
+Frontend (React)
+  │  POST /api/reportes  (multipart: JSON + foto)
+  ▼
+BFF Service (Spring Boot :9090)
+  ├── Invalida caché Redis
+  ├── Reenvía foto ──► MinIO :9000  ──►  URL pública guardada
+  └── Reenvía datos ──► ms-mascotas :8082
+                          │
+                          ├── JPA ──► PostgreSQL (tabla reportes)
+                          └── RabbitMQ ──► evento "reporte.nuevo"
+                                             │
+                                    ┌────────┴────────┐
+                                    ▼                  ▼
+                           ms-geolocalizacion    ms-coincidencias
+                           PostGIS ──► punto_geo  JPA ──► coincidencias</div>
+
+<hr>
+
+<h2>7. Garantías de Integridad</h2>
+
+<table>
+  <thead><tr><th>Mecanismo</th><th>Implementación</th></tr></thead>
+  <tbody>
+    <tr><td>Transacciones JPA</td><td><code>@Transactional</code> en métodos de servicio</td></tr>
+    <tr><td>Validación de entrada</td><td><code>@Valid</code> + <code>@NotBlank</code>, <code>@Email</code> en DTOs</td></tr>
+    <tr><td>Unicidad de email</td><td><code>@Column(unique = true)</code> en entidad User</td></tr>
+    <tr><td>Estado de reporte</td><td><code>@Enumerated</code> con valores fijos (ACTIVO, RESUELTO, ELIMINADO)</td></tr>
+    <tr><td>Contraseñas</td><td>BCrypt hash (<code>PasswordEncoder</code>) — nunca texto plano</td></tr>
+    <tr><td>Caché coherente</td><td><code>invalidateCache()</code> tras cada CREATE/UPDATE de reporte</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

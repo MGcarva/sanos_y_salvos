@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Repositorios — Sanos y Salvos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1a1a1a; background: #fff; padding: 24px 40px; }
+  h1 { font-size: 22px; color: #1a3a5c; border-bottom: 3px solid #2563eb; padding-bottom: 8px; margin-bottom: 6px; }
+  .subtitle { color: #555; font-size: 11px; margin-bottom: 24px; }
+  h2 { font-size: 14px; color: #2563eb; margin: 20px 0 8px; border-left: 4px solid #2563eb; padding-left: 8px; background: #eff6ff; padding: 6px 8px; border-radius: 0 4px 4px 0; }
+  .repo-card { border: 1px solid #dbeafe; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; background: #f8faff; }
+  .repo-card h3 { font-size: 13px; color: #1d4ed8; margin-bottom: 4px; }
+  .repo-url { font-family: 'Consolas', monospace; font-size: 10.5px; color: #2563eb; background: #dbeafe; padding: 3px 8px; border-radius: 4px; display: inline-block; margin: 4px 0; word-break: break-all; }
+  .tech-badge { display: inline-block; background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 1px 8px; font-size: 10px; font-weight: 600; margin: 2px 2px; }
+  .desc { color: #374151; line-height: 1.6; margin-top: 6px; font-size: 11.5px; }
+  .dir { font-family: 'Consolas', monospace; font-size: 10.5px; color: #6b7280; }
+  ul { margin: 6px 0 0 18px; }
+  ul li { margin: 2px 0; font-size: 11.5px; color: #374151; line-height: 1.5; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 8px 0; }
+  .section-label { font-size: 10px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+  @media print { .repo-card { page-break-inside: avoid; } }
+</style>
+</head>
+<body>
+
+<h1>Repositorios del Proyecto — Sanos y Salvos</h1>
+<div class="subtitle">
+  <strong>Asignatura:</strong> DSY1106 Desarrollo Fullstack III &nbsp;|&nbsp;
+  <strong>Evaluación:</strong> Parcial N°3 &nbsp;|&nbsp;
+  <strong>Fecha:</strong> Junio 2026 &nbsp;|&nbsp;
+  <strong>Integrante:</strong> Gonzalo Carvajal
+</div>
+
+<h2>Repositorio Principal</h2>
+
+<div class="repo-card">
+  <h3>sanos_y_salvos — Repositorio Monorepo Principal</h3>
+  <div class="section-label">URL</div>
+  <div class="repo-url">https://github.com/mgcarva/sanos_y_salvos</div>
+  <div class="desc">
+    Repositorio monorepo que contiene todos los componentes del sistema. Incluye frontend React, todos los microservicios Spring Boot, infraestructura Terraform AWS, Docker Compose para entorno local y documentación completa del proyecto.
+  </div>
+  <ul>
+    <li>Frontend React (directorio <code>/frontend</code>)</li>
+    <li>BFF Service — Backend For Frontend (directorio <code>/bff-service</code>)</li>
+    <li>MS-Mascotas — Microservicio de reportes (directorio <code>/ms-mascotas</code>)</li>
+    <li>MS-Geolocalizacion — Microservicio geográfico (directorio <code>/ms-geolocalizacion</code>)</li>
+    <li>MS-Coincidencias — Microservicio de matching (directorio <code>/ms-coincidencias</code>)</li>
+    <li>Auth Service — Autenticación JWT (directorio <code>/auth-service</code>)</li>
+    <li>Infraestructura Terraform AWS (archivos <code>.tf</code> en raíz)</li>
+    <li>Docker Compose para entorno local (<code>docker-compose.yml</code>)</li>
+    <li>Documentación completa (directorio <code>/docs</code>)</li>
+  </ul>
+</div>
+
+<h2>Componentes Frontend</h2>
+
+<div class="repo-card">
+  <h3>Frontend — React SPA</h3>
+  <div class="section-label">Directorio</div>
+  <div class="dir">/frontend</div>
+  <div class="section-label" style="margin-top:6px">URL</div>
+  <div class="repo-url">https://github.com/mgcarva/sanos_y_salvos/tree/master/frontend</div>
+  <div style="margin-top:6px">
+    <span class="tech-badge">React 18</span>
+    <span class="tech-badge">Vite</span>
+    <span class="tech-badge">Leaflet</span>
+    <span class="tech-badge">Bootstrap 5</span>
+    <span class="tech-badge">Vitest</span>
+  </div>
+  <div class="desc">
+    SPA (Single Page Application) para gestión de reportes de mascotas. Incluye mapa interactivo con React-Leaflet, autenticación JWT, formulario de reporte en 3 pasos, visualización de coincidencias y chat con el asistente Amigo (Claude AI). Empaquetado como componente NPM estándar con <code>package.json</code>.
+  </div>
+</div>
+
+<h2>Componentes Backend — Microservicios</h2>
+
+<div class="repo-card">
+  <h3>BFF Service — Backend For Frontend (API Gateway)</h3>
+  <div class="section-label">Directorio</div>
+  <div class="dir">/bff-service</div>
+  <div class="section-label" style="margin-top:6px">URL</div>
+  <div class="repo-url">https://github.com/mgcarva/sanos_y_salvos/tree/master/bff-service</div>
+  <div style="margin-top:6px">
+    <span class="tech-badge">Spring Boot 3.2.5</span>
+    <span class="tech-badge">WebFlux</span>
+    <span class="tech-badge">Resilience4j</span>
+    <span class="tech-badge">Puerto 9090</span>
+  </div>
+  <div class="desc">
+    API Gateway único para el frontend. Implementa los patrones Proxy, Circuit Breaker y Facade. Orquesta las llamadas a los microservicios internos y valida tokens JWT. Expone Swagger UI en <code>/swagger-ui.html</code>.
+  </div>
+</div>
+
+<div class="repo-card">
+  <h3>Auth Service — Microservicio de Autenticación</h3>
+  <div class="section-label">Directorio</div>
+  <div class="dir">/auth-service</div>
+  <div class="section-label" style="margin-top:6px">URL</div>
+  <div class="repo-url">https://github.com/mgcarva/sanos_y_salvos/tree/master/auth-service</div>
+  <div style="margin-top:6px">
+    <span class="tech-badge">Spring Boot 3.2.5</span>
+    <span class="tech-badge">Spring Security</span>
+    <span class="tech-badge">JJWT</span>
+    <span class="tech-badge">Redis</span>
+    <span class="tech-badge">PostgreSQL</span>
+    <span class="tech-badge">Puerto 8091</span>
+  </div>
+  <div class="desc">
+    Microservicio de autenticación y gestión de usuarios. Genera tokens JWT de acceso y refresco. Usa Redis para caché de sesiones y rate limiting. Soporta roles USER, REFUGIO y ADMIN. 31 pruebas unitarias con 92% de cobertura en clases de negocio.
+  </div>
+</div>
+
+<div class="repo-card">
+  <h3>MS-Mascotas — Microservicio de Reportes</h3>
+  <div class="section-label">Directorio</div>
+  <div class="dir">/ms-mascotas</div>
+  <div class="section-label" style="margin-top:6px">URL</div>
+  <div class="repo-url">https://github.com/mgcarva/sanos_y_salvos/tree/master/ms-mascotas</div>
+  <div style="margin-top:6px">
+    <span class="tech-badge">Spring Boot 3.2.5</span>
+    <span class="tech-badge">Spring AMQP</span>
+    <span class="tech-badge">MinIO</span>
+    <span class="tech-badge">PostgreSQL/JPA</span>
+    <span class="tech-badge">Puerto 8092</span>
+  </div>
+  <div class="desc">
+    Microservicio de gestión de reportes de mascotas. Implementa el patrón Factory Method para crear reportes de tipo PERDIDO/ENCONTRADO, y el patrón Observer para publicar eventos en RabbitMQ. Almacena fotos en MinIO (S3-compatible). 13 pruebas unitarias.
+  </div>
+</div>
+
+<div class="repo-card">
+  <h3>MS-Geolocalizacion — Microservicio Geográfico</h3>
+  <div class="section-label">Directorio</div>
+  <div class="dir">/ms-geolocalizacion</div>
+  <div class="section-label" style="margin-top:6px">URL</div>
+  <div class="repo-url">https://github.com/mgcarva/sanos_y_salvos/tree/master/ms-geolocalizacion</div>
+  <div style="margin-top:6px">
+    <span class="tech-badge">Spring Boot 3.2.5</span>
+    <span class="tech-badge">PostGIS</span>
+    <span class="tech-badge">Hibernate Spatial</span>
+    <span class="tech-badge">RabbitMQ</span>
+    <span class="tech-badge">Puerto 8093</span>
+  </div>
+  <div class="desc">
+    Microservicio de procesamiento geográfico. Genera clusters y mapas de calor usando PostGIS con extensión ST_DWithin. Consume eventos de RabbitMQ (Observer) y aplica algoritmo K-means (Strategy). 5 pruebas unitarias con 100% de cobertura.
+  </div>
+</div>
+
+<div class="repo-card">
+  <h3>MS-Coincidencias — Microservicio de Matching</h3>
+  <div class="section-label">Directorio</div>
+  <div class="dir">/ms-coincidencias</div>
+  <div class="section-label" style="margin-top:6px">URL</div>
+  <div class="repo-url">https://github.com/mgcarva/sanos_y_salvos/tree/master/ms-coincidencias</div>
+  <div style="margin-top:6px">
+    <span class="tech-badge">Spring Boot 3.2.5</span>
+    <span class="tech-badge">FuzzyWuzzy</span>
+    <span class="tech-badge">RabbitMQ</span>
+    <span class="tech-badge">PostgreSQL/JPA</span>
+    <span class="tech-badge">Puerto 8094</span>
+  </div>
+  <div class="desc">
+    Microservicio de matching entre mascotas perdidas y encontradas. Usa FuzzyWuzzy para similitud de texto y un sistema de scoring multi-criterio (raza 30%, tamaño 20%, color 10%, geolocalización 12%). Consume eventos de RabbitMQ. 19 pruebas unitarias con 98-99% de cobertura.
+  </div>
+</div>
+
+<h2>Rama de Pruebas Unitarias</h2>
+
+<div class="repo-card">
+  <h3>Branch: pruebas-unitarias</h3>
+  <div class="repo-url">https://github.com/mgcarva/sanos_y_salvos/tree/pruebas-unitarias</div>
+  <div class="desc">
+    Rama Git creada para la EP3. Contiene correcciones de tests unitarios, informe de pruebas, documentación de persistencia, diagrama de arquitectura y colección Postman. No modifica código de producción.
+  </div>
+</div>
+
+<h2>Documentación</h2>
+
+<div class="repo-card">
+  <h3>Directorio /docs — Documentación del Proyecto</h3>
+  <div class="repo-url">https://github.com/mgcarva/sanos_y_salvos/tree/master/docs</div>
+  <ul>
+    <li><strong>DESCRIPCION_PERSISTENCIA.pdf</strong> — Descripción de la persistencia: JPA, PostGIS, Redis, MinIO</li>
+    <li><strong>INFORME_PRUEBAS_UNITARIAS.pdf</strong> — Informe de 100 pruebas unitarias (JUnit 5 + Vitest)</li>
+    <li><strong>PATRONES_DISEÑO.pdf</strong> — Análisis completo de patrones de diseño y arquetipos</li>
+    <li><strong>PLAN_BRANCHING.pdf</strong> — Estrategia Git Flow con evidencia de merges y ramas</li>
+    <li><strong>arquitectura.html</strong> — Diagrama de arquitectura de microservicios interactivo</li>
+    <li><strong>sanos-y-salvos-api.postman_collection.json</strong> — Colección Postman con todos los endpoints del BFF</li>
+  </ul>
+</div>
+
+</body>
+</html>
